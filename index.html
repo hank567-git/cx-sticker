@@ -40,7 +40,7 @@
 
     button { padding: 10px; border: none; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; }
     .btn-download { width: 100%; background: #28a745; color: white; padding: 12px; font-size: 15px; margin-top: 5px; }
-    .btn-primary { background: #007bff; color: white; width: 100%; padding: 10px; margin-top: 4px; font-size: 14px; }
+    .btn-primary { background: #007bff; color: white; flex: 1; padding: 10px; margin-top: 0; font-size: 14px; }
     .btn-primary:hover { background: #0056b3; }
     .btn-secondary { background: #17a2b8; color: white; width: 100%; margin-top: 4px; }
     .btn-danger { background: #dc3545; color: white; margin-top: 4px; width: 100%; }
@@ -63,8 +63,8 @@
       <h2>CX紋章貼紙生成器</h2>
 
       <div class="tab-group">
-        <button id="tabSingle" class="tab-btn active">1. 單貼紙微調編輯</button>
-        <button id="tabSheet" class="tab-btn">2. 4x6 排版預覽與下載</button>
+        <button id="tabSingle" class="tab-btn active">單貼紙微調編輯</button>
+        <button id="tabSheet" class="tab-btn">4x6 排版預覽與下載</button>
       </div>
 
       <div id="singlePanel">
@@ -161,6 +161,7 @@
         </div>
 
         <div class="send-box">
+          <button id="sendToSheetBtn" class="btn-primary">將此貼紙發送至</button>
           <select id="targetRowSelect">
             <option value="0">第 1 排</option>
             <option value="1">第 2 排</option>
@@ -170,7 +171,6 @@
             <option value="5">第 6 排</option>
             <option value="6">第 7 排</option>
           </select>
-          <button id="sendToSheetBtn" class="btn-primary">將此貼紙發送至該排 (5張)</button>
         </div>
 
         <button id="resetAllBtn" class="btn-reset">重置所有設定</button>
@@ -286,7 +286,7 @@
 
       savedRowCanvases[targetRow] = snapshotCanvas;
 
-      alert(`已成功將目前貼紙發送至「第 ${targetRow + 1} 排」！`);
+      alert(`已成功將目前貼紙發送至「第 ${targetRow + 1} 排」 (共 5 張)！`);
     });
 
     document.getElementById('clearAllRowsBtn').addEventListener('click', () => {
@@ -434,7 +434,6 @@
       } else { draw(); }
     }
 
-    // 繪製單顆貼紙 (有外框時直接照 1:1 滿版繪製，無外框時才可選 2mm 出血)
     function drawSingleSticker(targetCtx, cx, cy, diameter) {
       const s = diameter / 360;
       const hideFrame = document.getElementById('hideFrameCheck').checked;
@@ -445,7 +444,6 @@
       if (userImg) {
         targetCtx.save();
         
-        // 若為無外框模式且開啟 2mm 出血，延伸渲染範圍
         if (hideFrame && autoBleed) {
           const bleedR = innerR * (18 / 16);
           targetCtx.beginPath();
@@ -475,7 +473,6 @@
         targetCtx.fill();
       }
 
-      // 有外框模式：直接精準繪製 SVG 外框（自帶 18mm 出血範圍）
       if (!hideFrame && templateSvgImg.complete && templateSvgImg.naturalWidth !== 0) {
         targetCtx.drawImage(templateSvgImg, cx - diameter / 2, cy - diameter / 2, diameter, diameter);
       }
@@ -504,7 +501,7 @@
           const cy = marginY + r * stepY + stickerDiameter / 2;
 
           if (rowCanvas) {
-            targetCtx.drawImage(rowCanvas, cx - stickerDiameter/2, cy - stickerDiameter/2, stickerDiameter, stickerDiameter);
+            targetCtx.drawImage(rowCanvas, cx - stickerDiameter / 2, cy - stickerDiameter / 2, stickerDiameter, stickerDiameter);
           } else {
             targetCtx.fillStyle = "#E0E0E0";
             targetCtx.beginPath();
@@ -512,6 +509,7 @@
             targetCtx.fill();
           }
 
+          // 繪製左上角對位直角黑線
           const leftX = cx - stickerDiameter / 2;
           const topY = cy - stickerDiameter / 2;
 
