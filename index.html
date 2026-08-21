@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CX紋章貼紙生成器 (支援外框2mm出血與4x6排版)</title>
+  <title>CX紋章貼紙生成器 (支援4x6排版列印)</title>
   <style>
     * { box-sizing: border-box; touch-action: manipulation; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #eef2f5; margin: 0; padding: 15px; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; }
@@ -93,10 +93,10 @@
           </label>
         </div>
 
-        <div class="control-group">
+        <div class="control-group" id="autoBleedWrap" style="display:none;">
           <label class="checkbox-label" style="color:#007bff;">
             <input type="checkbox" id="autoBleedCheck" checked>
-            啟用最外框 2mm 自動出血延伸
+            無外框時自動延伸 2mm 出血
           </label>
         </div>
 
@@ -184,7 +184,7 @@
           </div>
           <div class="row-list" id="rowStatusContainer"></div>
         </div>
-        <p class="tip">💡 提示：在第1頁微調好貼紙後，點擊「發送至該排」，即可在此頁預覽並導出含外框 2mm 自動出血與對位線的 4x6 列印檔。</p>
+        <p class="tip">💡 提示：在第1頁微調好貼紙後，點擊「發送至該排」，即可在此頁預覽並導出含對位線的 4x6 列印檔。</p>
         <button id="downloadSheetBtn" class="btn-download">下載 4x6 7-11相片列印檔 (PNG)</button>
       </div>
 
@@ -286,7 +286,7 @@
 
       savedRowCanvases[targetRow] = snapshotCanvas;
 
-      alert(`已成功將目前貼紙設定（含外框 2mm 出血）發送至「第 ${targetRow + 1} 排」！`);
+      alert(`已成功將目前貼紙發送至「第 ${targetRow + 1} 排」！`);
     });
 
     document.getElementById('clearAllRowsBtn').addEventListener('click', () => {
@@ -357,8 +357,16 @@
 
     document.getElementById('hideFrameCheck').addEventListener('change', (e) => {
       const colorSection = document.getElementById('colorSection');
-      if (e.target.checked) { colorSection.style.opacity = '0.4'; colorSection.style.pointerEvents = 'none'; }
-      else { colorSection.style.opacity = '1'; colorSection.style.pointerEvents = 'auto'; }
+      const autoBleedWrap = document.getElementById('autoBleedWrap');
+      if (e.target.checked) { 
+        colorSection.style.opacity = '0.4'; 
+        colorSection.style.pointerEvents = 'none'; 
+        autoBleedWrap.style.display = 'block';
+      } else { 
+        colorSection.style.opacity = '1'; 
+        colorSection.style.pointerEvents = 'auto'; 
+        autoBleedWrap.style.display = 'none';
+      }
       if (userImg) calculateBaseFitScale();
       draw();
     });
@@ -368,6 +376,7 @@
     document.getElementById('resetAllBtn').addEventListener('click', () => {
       document.getElementById('hideFrameCheck').checked = false;
       document.getElementById('autoBleedCheck').checked = true;
+      document.getElementById('autoBleedWrap').style.display = 'none';
       document.getElementById('colorSection').style.opacity = '1';
       document.getElementById('colorSection').style.pointerEvents = 'auto';
       document.getElementById('redColor').value = '#FF0000';
@@ -425,7 +434,7 @@
       } else { draw(); }
     }
 
-    // 繪製單顆貼紙（最外框自動擴展 2mm 出血）
+    // 繪製單顆貼紙 (有外框時直接照 1:1 滿版繪製，無外框時才可選 2mm 出血)
     function drawSingleSticker(targetCtx, cx, cy, diameter) {
       const s = diameter / 360;
       const hideFrame = document.getElementById('hideFrameCheck').checked;
@@ -433,12 +442,20 @@
 
       const innerR = hideFrame ? (180 * s) : (138 * s);
 
-      // 1. 繪製中間上傳圖片 (保持 16mm 尺寸不變)
       if (userImg) {
         targetCtx.save();
-        targetCtx.beginPath();
-        targetCtx.arc(cx, cy, innerR, 0, Math.PI * 2);
-        targetCtx.clip();
+        
+        // 若為無外框模式且開啟 2mm 出血，延伸渲染範圍
+        if (hideFrame && autoBleed) {
+          const bleedR = innerR * (18 / 16);
+          targetCtx.beginPath();
+          targetCtx.arc(cx, cy, bleedR, 0, Math.PI * 2);
+          targetCtx.clip();
+        } else {
+          targetCtx.beginPath();
+          targetCtx.arc(cx, cy, innerR, 0, Math.PI * 2);
+          targetCtx.clip();
+        }
 
         const offsetX = (imgState.x - 180) * s;
         const offsetY = (imgState.y - 180) * s;
@@ -458,17 +475,9 @@
         targetCtx.fill();
       }
 
-      if (hideFrame) return;
-
-      // 2. 繪製最外框 SVG（若勾選出血，外框會向外延伸 2mm）
-      if (templateSvgImg.complete && templateSvgImg.naturalWidth !== 0) {
-        if (autoBleed) {
-          // 2mm 出血：直徑由 16mm 放大至 18mm（等比例放大 1.125 倍）
-          const bleedDiameter = diameter * (18 / 16);
-          targetCtx.drawImage(templateSvgImg, cx - bleedDiameter / 2, cy - bleedDiameter / 2, bleedDiameter, bleedDiameter);
-        } else {
-          targetCtx.drawImage(templateSvgImg, cx - diameter / 2, cy - diameter / 2, diameter, diameter);
-        }
+      // 有外框模式：直接精準繪製 SVG 外框（自帶 18mm 出血範圍）
+      if (!hideFrame && templateSvgImg.complete && templateSvgImg.naturalWidth !== 0) {
+        targetCtx.drawImage(templateSvgImg, cx - diameter / 2, cy - diameter / 2, diameter, diameter);
       }
     }
 
