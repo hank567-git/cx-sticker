@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CX紋章貼紙生成器 (支援外框2mm出血與4x6排版)</title>
+  <style>
+    * { box-sizing: border-box; touch-action: manipulation; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #eef2f5; margin: 0; padding: 15px; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; }
+    .container { display: flex; flex-wrap: wrap; gap: 20px; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 900px; width: 100%; align-items: flex-start; }
+    
+    .tab-group { display: flex; width: 100%; gap: 10px; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-bottom: 10px; }
+    .tab-btn { flex: 1; padding: 10px; border: none; background: #e9ecef; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer; color: #495057; }
+    .tab-btn.active { background: #007bff; color: white; }
+
+    .controls { flex: 1; min-width: 300px; display: flex; flex-direction: column; gap: 12px; }
+    .preview-area { flex: 1; min-width: 320px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f8f9fa; padding: 15px; border-radius: 8px; overflow: hidden; position: sticky; top: 10px; z-index: 10; }
+    
+    h2 { margin: 0 0 5px 0; font-size: 18px; color: #333; border-bottom: 2px solid #007bff; padding-bottom: 6px; }
+    .control-group { display: flex; flex-direction: column; gap: 5px; }
+    label { font-size: 13px; font-weight: 600; color: #495057; }
+    input[type="file"], input[type="range"], input[type="color"], select { width: 100%; cursor: pointer; }
+    .color-pickers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .color-item { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 12px; }
+    .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: bold; color: #d9534f; cursor: pointer; margin-top: 2px; }
+    .checkbox-label input { width: 18px; height: 18px; cursor: pointer; }
+    
+    canvas { border: 1px solid #ddd; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.15); cursor: move; max-width: 100%; height: auto; touch-action: none; }
+    canvas.single-mode { border-radius: 50%; }
+    
+    .quad-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 2px; }
+    .quad-item { background: #f8f9fa; padding: 8px; border-radius: 6px; border: 1px solid #e9ecef; }
+    
+    .number-input-wrap { display: flex; align-items: center; gap: 2px; }
+    .number-input-wrap input[type="number"] { width: 50px; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; text-align: right; }
+    .unit { font-size: 11px; color: #6c757d; font-weight: bold; }
+
+    .align-btn-group { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 4px; }
+    .btn-align { background: #17a2b8; color: white; padding: 6px 4px; font-size: 12px; border-radius: 4px; text-align: center; }
+
+    button { padding: 10px; border: none; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; }
+    .btn-download { width: 100%; background: #28a745; color: white; padding: 12px; font-size: 15px; margin-top: 5px; }
+    .btn-primary { background: #007bff; color: white; width: 100%; padding: 10px; margin-top: 4px; font-size: 14px; }
+    .btn-primary:hover { background: #0056b3; }
+    .btn-secondary { background: #17a2b8; color: white; width: 100%; margin-top: 4px; }
+    .btn-danger { background: #dc3545; color: white; margin-top: 4px; width: 100%; }
+    .btn-reset { background: #6c757d; color: white; width: 100%; margin-top: 5px; }
+    .tip { font-size: 11px; color: #6c757d; line-height: 1.3; }
+
+    .send-box { display: flex; gap: 8px; align-items: center; margin-top: 8px; background: #e7f1ff; padding: 10px; border-radius: 8px; border: 1px solid #b6d4fe; }
+    .send-box select { width: 110px; padding: 8px; border-radius: 6px; font-weight: bold; }
+
+    .row-list { display: flex; flex-direction: column; gap: 6px; }
+    .row-item { display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; padding: 6px 10px; border-radius: 6px; font-size: 12px; border: 1px solid #ddd; }
+    .row-status { font-weight: bold; color: #28a745; }
+    .row-status.empty { color: #6c757d; font-weight: normal; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="controls">
+      <h2>CX紋章貼紙生成器</h2>
+
+      <div class="tab-group">
+        <button id="tabSingle" class="tab-btn active">1. 單貼紙微調編輯</button>
+        <button id="tabSheet" class="tab-btn">2. 4x6 排版預覽與下載</button>
+      </div>
+
+      <div id="singlePanel">
+        <div class="control-group" id="colorSection">
+          <label>1. 外框分區調色：</label>
+          <div class="color-pickers">
+            <div class="color-item">
+              <span>紅色區</span>
+              <input type="color" id="redColor" value="#FF0000">
+            </div>
+            <div class="color-item">
+              <span>黑色區</span>
+              <input type="color" id="blackColor" value="#000000">
+            </div>
+            <div class="color-item">
+              <span>白色區</span>
+              <input type="color" id="whiteColor" value="#FFFFFF">
+            </div>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="hideFrameCheck">
+            不要外框（全圖模式）
+          </label>
+        </div>
+
+        <div class="control-group">
+          <label class="checkbox-label" style="color:#007bff;">
+            <input type="checkbox" id="autoBleedCheck" checked>
+            啟用最外框 2mm 自動出血延伸
+          </label>
+        </div>
+
+        <div class="control-group">
+          <label>2. 上傳內圈圖片：</label>
+          <input type="file" id="imageInput" accept="image/*">
+          <button id="clearImgBtn" class="btn-danger">刪除內圈圖片</button>
+        </div>
+
+        <div class="control-group">
+          <label>3. 圖片微調：</label>
+          <div class="align-btn-group">
+            <button id="alignHBtn" class="btn-align">左右置中</button>
+            <button id="alignVBtn" class="btn-align">上下置中</button>
+          </div>
+
+          <div class="quad-grid">
+            <div class="quad-item">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <span class="tip">左右位移</span>
+                <div class="number-input-wrap">
+                  <input type="number" id="posXNum" min="-180" max="180" value="0">
+                  <span class="unit">px</span>
+                </div>
+              </div>
+              <input type="range" id="posXInput" min="-180" max="180" step="1" value="0">
+            </div>
+
+            <div class="quad-item">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <span class="tip">上下位移</span>
+                <div class="number-input-wrap">
+                  <input type="number" id="posYNum" min="-180" max="180" value="0">
+                  <span class="unit">px</span>
+                </div>
+              </div>
+              <input type="range" id="posYInput" min="-180" max="180" step="1" value="0">
+            </div>
+
+            <div class="quad-item">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <span class="tip">圖片縮放</span>
+                <div class="number-input-wrap">
+                  <input type="number" id="scaleNum" min="10" max="300" value="100">
+                  <span class="unit">%</span>
+                </div>
+              </div>
+              <input type="range" id="scaleInput" min="10" max="300" step="1" value="100">
+            </div>
+
+            <div class="quad-item">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <span class="tip">圖片旋轉</span>
+                <div class="number-input-wrap">
+                  <input type="number" id="rotateNum" min="0" max="360" value="0">
+                  <span class="unit">°</span>
+                </div>
+              </div>
+              <input type="range" id="rotateInput" min="0" max="360" step="1" value="0">
+            </div>
+          </div>
+        </div>
+
+        <div class="send-box">
+          <select id="targetRowSelect">
+            <option value="0">第 1 排</option>
+            <option value="1">第 2 排</option>
+            <option value="2">第 3 排</option>
+            <option value="3">第 4 排</option>
+            <option value="4">第 5 排</option>
+            <option value="5">第 6 排</option>
+            <option value="6">第 7 排</option>
+          </select>
+          <button id="sendToSheetBtn" class="btn-primary">將此貼紙發送至該排 (5張)</button>
+        </div>
+
+        <button id="resetAllBtn" class="btn-reset">重置所有設定</button>
+      </div>
+
+      <div id="sheetPanel" style="display:none;">
+        <div class="control-group">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+            <label>4x6 7排圖案狀態：</label>
+            <button id="clearAllRowsBtn" class="btn-danger" style="width:auto; padding:4px 8px; font-size:11px; margin:0;">清空所有排數</button>
+          </div>
+          <div class="row-list" id="rowStatusContainer"></div>
+        </div>
+        <p class="tip">💡 提示：在第1頁微調好貼紙後，點擊「發送至該排」，即可在此頁預覽並導出含外框 2mm 自動出血與對位線的 4x6 列印檔。</p>
+        <button id="downloadSheetBtn" class="btn-download">下載 4x6 7-11相片列印檔 (PNG)</button>
+      </div>
+
+    </div>
+
+    <div class="preview-area">
+      <canvas id="canvas" width="360" height="360" class="single-mode"></canvas>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    let currentMode = 'single';
+    let svgDom = null;
+    let templateSvgImg = new Image();
+    let userImg = null;
+
+    let savedRowCanvases = [null, null, null, null, null, null, null];
+
+    let baseFitScale = 1.0; 
+    let userScaleMultiplier = 1.0; 
+    let imgState = { x: 180, y: 180, angle: 0 };
+    let isDragging = false;
+    let startX, startY;
+
+    let initialPinchDist = null;
+    let initialScaleMultiplier = 1.0;
+
+    function updateRowStatusUI() {
+      const container = document.getElementById('rowStatusContainer');
+      container.innerHTML = '';
+      for (let i = 0; i < 7; i++) {
+        const div = document.createElement('div');
+        div.className = 'row-item';
+        const isSet = !!savedRowCanvases[i];
+        div.innerHTML = `
+          <span>第 ${i + 1} 排 (5張貼紙)：</span>
+          <span class="row-status ${isSet ? '' : 'empty'}">${isSet ? '✓ 已派發圖案' : '尚未設定 (留空)'}</span>
+          ${isSet ? `<button onclick="clearSingleRow(${i})" style="padding:2px 6px; font-size:11px; background:#dc3545; color:white; border:none; border-radius:4px; cursor:pointer;">清除</button>` : ''}
+        `;
+        container.appendChild(div);
+      }
+    }
+
+    window.clearSingleRow = function(idx) {
+      savedRowCanvases[idx] = null;
+      updateRowStatusUI();
+      if (currentMode === 'sheet') draw();
+    };
+
+    fetch('外框.svg')
+      .then(res => res.text())
+      .then(xmlText => {
+        const parser = new DOMParser();
+        const svgDoc = parser.parseFromString(xmlText, "image/svg+xml");
+        svgDom = svgDoc.querySelector('svg');
+        updateSvgColorsAndDraw();
+      })
+      .catch(() => {});
+
+    document.getElementById('tabSingle').addEventListener('click', () => {
+      currentMode = 'single';
+      document.getElementById('tabSingle').classList.add('active');
+      document.getElementById('tabSheet').classList.remove('active');
+      document.getElementById('singlePanel').style.display = 'block';
+      document.getElementById('sheetPanel').style.display = 'none';
+      
+      canvas.width = 360;
+      canvas.height = 360;
+      canvas.classList.add('single-mode');
+      draw();
+    });
+
+    document.getElementById('tabSheet').addEventListener('click', () => {
+      currentMode = 'sheet';
+      document.getElementById('tabSheet').classList.add('active');
+      document.getElementById('tabSingle').classList.remove('active');
+      document.getElementById('singlePanel').style.display = 'none';
+      document.getElementById('sheetPanel').style.display = 'block';
+
+      updateRowStatusUI();
+      canvas.width = 400;
+      canvas.height = 592;
+      canvas.classList.remove('single-mode');
+      draw();
+    });
+
+    document.getElementById('sendToSheetBtn').addEventListener('click', () => {
+      const targetRow = parseInt(document.getElementById('targetRowSelect').value);
+      
+      const snapshotCanvas = document.createElement('canvas');
+      snapshotCanvas.width = 360;
+      snapshotCanvas.height = 360;
+      const snapCtx = snapshotCanvas.getContext('2d');
+
+      drawSingleSticker(snapCtx, 180, 180, 360);
+
+      savedRowCanvases[targetRow] = snapshotCanvas;
+
+      alert(`已成功將目前貼紙設定（含外框 2mm 出血）發送至「第 ${targetRow + 1} 排」！`);
+    });
+
+    document.getElementById('clearAllRowsBtn').addEventListener('click', () => {
+      savedRowCanvases = [null, null, null, null, null, null, null];
+      updateRowStatusUI();
+      if (currentMode === 'sheet') draw();
+    });
+
+    function syncPositionUI() {
+      const offsetX = Math.round(imgState.x - 180);
+      const offsetY = Math.round(imgState.y - 180);
+      document.getElementById('posXInput').value = offsetX;
+      document.getElementById('posXNum').value = offsetX;
+      document.getElementById('posYInput').value = offsetY;
+      document.getElementById('posYNum').value = offsetY;
+    }
+
+    function syncScaleUI() {
+      const scalePct = Math.round(userScaleMultiplier * 100);
+      document.getElementById('scaleInput').value = scalePct;
+      document.getElementById('scaleNum').value = scalePct;
+    }
+
+    function calculateBaseFitScale() {
+      if (!userImg) return;
+      const hideFrame = document.getElementById('hideFrameCheck').checked;
+      const targetDiameter = hideFrame ? 360 : (138 * 2);
+      const minEdge = Math.min(userImg.width, userImg.height);
+      
+      baseFitScale = targetDiameter / minEdge; 
+      userScaleMultiplier = 1.0;
+      imgState.x = 180;
+      imgState.y = 180;
+      
+      syncPositionUI();
+      syncScaleUI();
+    }
+
+    document.getElementById('imageInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          userImg = new Image();
+          userImg.onload = () => {
+            calculateBaseFitScale();
+            draw();
+          };
+          userImg.src = evt.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    const posXInput = document.getElementById('posXInput');
+    const posXNum = document.getElementById('posXNum');
+    posXInput.addEventListener('input', (e) => { posXNum.value = e.target.value; imgState.x = 180 + parseFloat(e.target.value); draw(); });
+    posXNum.addEventListener('input', (e) => { let val = parseFloat(e.target.value) || 0; posXInput.value = val; imgState.x = 180 + val; draw(); });
+
+    const posYInput = document.getElementById('posYInput');
+    const posYNum = document.getElementById('posYNum');
+    posYInput.addEventListener('input', (e) => { posYNum.value = e.target.value; imgState.y = 180 + parseFloat(e.target.value); draw(); });
+    posYNum.addEventListener('input', (e) => { let val = parseFloat(e.target.value) || 0; posYInput.value = val; imgState.y = 180 + val; draw(); });
+
+    document.getElementById('alignHBtn').addEventListener('click', () => { imgState.x = 180; syncPositionUI(); draw(); });
+    document.getElementById('alignVBtn').addEventListener('click', () => { imgState.y = 180; syncPositionUI(); draw(); });
+    document.getElementById('clearImgBtn').addEventListener('click', () => { userImg = null; document.getElementById('imageInput').value = ''; draw(); });
+
+    document.getElementById('hideFrameCheck').addEventListener('change', (e) => {
+      const colorSection = document.getElementById('colorSection');
+      if (e.target.checked) { colorSection.style.opacity = '0.4'; colorSection.style.pointerEvents = 'none'; }
+      else { colorSection.style.opacity = '1'; colorSection.style.pointerEvents = 'auto'; }
+      if (userImg) calculateBaseFitScale();
+      draw();
+    });
+
+    document.getElementById('autoBleedCheck').addEventListener('change', draw);
+
+    document.getElementById('resetAllBtn').addEventListener('click', () => {
+      document.getElementById('hideFrameCheck').checked = false;
+      document.getElementById('autoBleedCheck').checked = true;
+      document.getElementById('colorSection').style.opacity = '1';
+      document.getElementById('colorSection').style.pointerEvents = 'auto';
+      document.getElementById('redColor').value = '#FF0000';
+      document.getElementById('blackColor').value = '#000000';
+      document.getElementById('whiteColor').value = '#FFFFFF';
+      document.getElementById('rotateInput').value = '0';
+      document.getElementById('rotateNum').value = '0';
+      imgState.angle = 0;
+      if (userImg) {
+        calculateBaseFitScale();
+      } else {
+        document.getElementById('scaleInput').value = '100';
+        document.getElementById('scaleNum').value = '100';
+        userScaleMultiplier = 1.0;
+        imgState = { x: 180, y: 180, angle: 0 };
+        syncPositionUI();
+      }
+      updateSvgColorsAndDraw();
+    });
+
+    const scaleInput = document.getElementById('scaleInput');
+    const scaleNum = document.getElementById('scaleNum');
+    scaleInput.addEventListener('input', (e) => { scaleNum.value = e.target.value; userScaleMultiplier = parseFloat(e.target.value) / 100; draw(); });
+    scaleNum.addEventListener('input', (e) => { let val = parseFloat(e.target.value) || 100; scaleInput.value = val; userScaleMultiplier = val / 100; draw(); });
+
+    const rotateInput = document.getElementById('rotateInput');
+    const rotateNum = document.getElementById('rotateNum');
+    rotateInput.addEventListener('input', (e) => { rotateNum.value = e.target.value; imgState.angle = parseInt(e.target.value) || 0; draw(); });
+    rotateNum.addEventListener('input', (e) => { let val = parseInt(e.target.value) || 0; rotateInput.value = val; imgState.angle = val; draw(); });
+
+    document.getElementById('redColor').addEventListener('input', updateSvgColorsAndDraw);
+    document.getElementById('blackColor').addEventListener('input', updateSvgColorsAndDraw);
+    document.getElementById('whiteColor').addEventListener('input', updateSvgColorsAndDraw);
+
+    function updateSvgColorsAndDraw() {
+      if (svgDom) {
+        const cRed = document.getElementById('redColor').value;
+        const cBlack = document.getElementById('blackColor').value;
+        const cWhite = document.getElementById('whiteColor').value;
+
+        const redEl = svgDom.querySelector('#red-layer');
+        const blackEl = svgDom.querySelector('#black-layer');
+        const whiteEl = svgDom.querySelector('#white-layer');
+
+        if (redEl) redEl.setAttribute('fill', cRed);
+        if (blackEl) blackEl.setAttribute('fill', cBlack);
+        if (whiteEl) { whiteEl.setAttribute('fill', cWhite); whiteEl.setAttribute('stroke', cWhite); }
+
+        const svgString = new XMLSerializer().serializeToString(svgDom);
+        const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(svgBlob);
+
+        templateSvgImg.onload = () => { draw(); URL.revokeObjectURL(url); };
+        templateSvgImg.src = url;
+      } else { draw(); }
+    }
+
+    // 繪製單顆貼紙（最外框自動擴展 2mm 出血）
+    function drawSingleSticker(targetCtx, cx, cy, diameter) {
+      const s = diameter / 360;
+      const hideFrame = document.getElementById('hideFrameCheck').checked;
+      const autoBleed = document.getElementById('autoBleedCheck').checked;
+
+      const innerR = hideFrame ? (180 * s) : (138 * s);
+
+      // 1. 繪製中間上傳圖片 (保持 16mm 尺寸不變)
+      if (userImg) {
+        targetCtx.save();
+        targetCtx.beginPath();
+        targetCtx.arc(cx, cy, innerR, 0, Math.PI * 2);
+        targetCtx.clip();
+
+        const offsetX = (imgState.x - 180) * s;
+        const offsetY = (imgState.y - 180) * s;
+
+        targetCtx.translate(cx + offsetX, cy + offsetY);
+        targetCtx.rotate((imgState.angle * Math.PI) / 180);
+
+        const finalScale = baseFitScale * userScaleMultiplier;
+        const w = userImg.width * finalScale * s;
+        const h = userImg.height * finalScale * s;
+        targetCtx.drawImage(userImg, -w / 2, -h / 2, w, h);
+        targetCtx.restore();
+      } else {
+        targetCtx.fillStyle = "#A0A0A0";
+        targetCtx.beginPath();
+        targetCtx.arc(cx, cy, innerR, 0, Math.PI * 2);
+        targetCtx.fill();
+      }
+
+      if (hideFrame) return;
+
+      // 2. 繪製最外框 SVG（若勾選出血，外框會向外延伸 2mm）
+      if (templateSvgImg.complete && templateSvgImg.naturalWidth !== 0) {
+        if (autoBleed) {
+          // 2mm 出血：直徑由 16mm 放大至 18mm（等比例放大 1.125 倍）
+          const bleedDiameter = diameter * (18 / 16);
+          targetCtx.drawImage(templateSvgImg, cx - bleedDiameter / 2, cy - bleedDiameter / 2, bleedDiameter, bleedDiameter);
+        } else {
+          targetCtx.drawImage(templateSvgImg, cx - diameter / 2, cy - diameter / 2, diameter, diameter);
+        }
+      }
+    }
+
+    function drawSheetLayout(targetCtx, sheetWidth, sheetHeight) {
+      targetCtx.clearRect(0, 0, sheetWidth, sheetHeight);
+      targetCtx.fillStyle = "#FFFFFF";
+      targetCtx.fillRect(0, 0, sheetWidth, sheetHeight);
+
+      const rows = 7;
+      const cols = 5;
+
+      const marginX = sheetWidth * 0.02;
+      const marginY = sheetHeight * 0.02;
+      const stickerDiameter = (sheetWidth - marginX * 2) / cols;
+
+      const stepX = stickerDiameter;
+      const stepY = (sheetHeight - marginY * 2) / rows;
+      const lineLen = stickerDiameter * 0.25;
+
+      for (let r = 0; r < rows; r++) {
+        const rowCanvas = savedRowCanvases[r];
+        for (let c = 0; c < cols; c++) {
+          const cx = marginX + c * stepX + stickerDiameter / 2;
+          const cy = marginY + r * stepY + stickerDiameter / 2;
+
+          if (rowCanvas) {
+            targetCtx.drawImage(rowCanvas, cx - stickerDiameter/2, cy - stickerDiameter/2, stickerDiameter, stickerDiameter);
+          } else {
+            targetCtx.fillStyle = "#E0E0E0";
+            targetCtx.beginPath();
+            targetCtx.arc(cx, cy, stickerDiameter * 0.38, 0, Math.PI * 2);
+            targetCtx.fill();
+          }
+
+          const leftX = cx - stickerDiameter / 2;
+          const topY = cy - stickerDiameter / 2;
+
+          targetCtx.save();
+          targetCtx.strokeStyle = "#000000";
+          targetCtx.lineWidth = Math.max(1, sheetWidth * 0.0015);
+          
+          targetCtx.beginPath();
+          targetCtx.moveTo(leftX - lineLen * 0.2, topY);
+          targetCtx.lineTo(leftX + lineLen, topY);
+          targetCtx.moveTo(leftX, topY - lineLen * 0.2);
+          targetCtx.lineTo(leftX, topY + lineLen);
+          targetCtx.stroke();
+          
+          targetCtx.restore();
+        }
+      }
+    }
+
+    function draw() {
+      if (currentMode === 'single') {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawSingleSticker(ctx, 180, 180, 360);
+      } else {
+        drawSheetLayout(ctx, canvas.width, canvas.height);
+      }
+    }
+
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    }
+
+    function getPinchDistance(touches) {
+      const dx = touches[0].clientX - touches[1].clientX;
+      const dy = touches[0].clientY - touches[1].clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function startDrag(e) {
+      if (!userImg || currentMode !== 'single') return;
+      
+      if (e.touches && e.touches.length === 2) {
+        isDragging = false;
+        initialPinchDist = getPinchDistance(e.touches);
+        initialScaleMultiplier = userScaleMultiplier;
+        return;
+      }
+
+      isDragging = true;
+      const pos = getPos(e);
+      startX = pos.x - imgState.x;
+      startY = pos.y - imgState.y;
+    }
+
+    function moveDrag(e) {
+      if (!userImg || currentMode !== 'single') return;
+
+      if (e.touches && e.touches.length === 2 && initialPinchDist) {
+        e.preventDefault();
+        const currentDist = getPinchDistance(e.touches);
+        const scaleFactor = currentDist / initialPinchDist;
+        let newScale = initialScaleMultiplier * scaleFactor;
+
+        newScale = Math.max(0.1, Math.min(3.0, newScale));
+        userScaleMultiplier = newScale;
+
+        syncScaleUI();
+        draw();
+        return;
+      }
+
+      if (isDragging) {
+        if (e.touches) e.preventDefault();
+        const pos = getPos(e);
+        imgState.x = pos.x - startX;
+        imgState.y = pos.y - startY;
+        syncPositionUI();
+        draw();
+      }
+    }
+
+    function stopDrag() {
+      isDragging = false;
+      initialPinchDist = null;
+    }
+
+    canvas.addEventListener('mousedown', startDrag);
+    canvas.addEventListener('mousemove', moveDrag);
+    canvas.addEventListener('mouseup', stopDrag);
+    canvas.addEventListener('mouseleave', stopDrag);
+
+    canvas.addEventListener('touchstart', startDrag, { passive: false });
+    canvas.addEventListener('touchmove', moveDrag, { passive: false });
+    canvas.addEventListener('touchend', stopDrag);
+
+    document.getElementById('downloadSheetBtn').addEventListener('click', () => {
+      const outCanvas = document.createElement('canvas');
+      outCanvas.width = 1200;
+      outCanvas.height = 1776;
+      const outCtx = outCanvas.getContext('2d');
+      
+      drawSheetLayout(outCtx, 1200, 1776);
+
+      const link = document.createElement('a');
+      link.download = 'CX_Stickers_4x6_PrintSheet.png';
+      link.href = outCanvas.toDataURL('image/png');
+      link.click();
+    });
+
+    draw();
+  </script>
+</body>
+</html>
