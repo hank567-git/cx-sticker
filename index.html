@@ -1,628 +1,1119 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CX紋章貼紙生成器 (支援4x6排版列印)</title>
-  <style>
-    * { box-sizing: border-box; touch-action: manipulation; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #eef2f5; margin: 0; padding: 15px; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; }
-    .container { display: flex; flex-wrap: wrap; gap: 20px; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 900px; width: 100%; align-items: flex-start; }
-    
-    .tab-group { display: flex; width: 100%; gap: 10px; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-bottom: 10px; }
-    .tab-btn { flex: 1; padding: 10px; border: none; background: #e9ecef; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer; color: #495057; }
-    .tab-btn.active { background: #007bff; color: white; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CX紋章貼紙生成器 (支援4x6排版列印)</title>
+<style>
+  * { box-sizing: border-box; touch-action: manipulation; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #eef2f5; margin: 0; padding: 15px; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; }
+  .container { display: flex; flex-wrap: wrap; gap: 20px; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 900px; width: 100%; align-items: flex-start; }
 
-    .controls { flex: 1; min-width: 300px; display: flex; flex-direction: column; gap: 12px; }
-    .preview-area { flex: 1; min-width: 320px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f8f9fa; padding: 15px; border-radius: 8px; overflow: hidden; position: sticky; top: 10px; z-index: 10; }
-    
-    h2 { margin: 0 0 5px 0; font-size: 18px; color: #333; border-bottom: 2px solid #007bff; padding-bottom: 6px; }
-    .control-group { display: flex; flex-direction: column; gap: 5px; }
-    label { font-size: 13px; font-weight: 600; color: #495057; }
-    input[type="file"], input[type="range"], input[type="color"], select { width: 100%; cursor: pointer; }
-    .color-pickers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-    .color-item { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 12px; }
-    .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: bold; color: #d9534f; cursor: pointer; margin-top: 2px; }
-    .checkbox-label input { width: 18px; height: 18px; cursor: pointer; }
-    
-    canvas { border: 1px solid #ddd; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.15); cursor: move; max-width: 100%; height: auto; touch-action: none; }
-    canvas.single-mode { border-radius: 50%; }
-    
-    .quad-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 2px; }
-    .quad-item { background: #f8f9fa; padding: 8px; border-radius: 6px; border: 1px solid #e9ecef; }
-    
-    .number-input-wrap { display: flex; align-items: center; gap: 2px; }
-    .number-input-wrap input[type="number"] { width: 50px; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; text-align: right; }
-    .unit { font-size: 11px; color: #6c757d; font-weight: bold; }
+  .tab-group { display: flex; width: 100%; gap: 10px; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-bottom: 10px; }
+  .tab-btn { flex: 1; padding: 10px; border: none; background: #e9ecef; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer; color: #495057; }
+  .tab-btn.active { background: #007bff; color: white; }
 
-    .align-btn-group { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 4px; }
-    .btn-align { background: #17a2b8; color: white; padding: 6px 4px; font-size: 12px; border-radius: 4px; text-align: center; }
+  .controls { flex: 1; min-width: min(300px, 100%); display: flex; flex-direction: column; gap: 12px; }
+  .preview-area { flex: 1; min-width: min(320px, 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f8f9fa; padding: 15px; border-radius: 8px; overflow: hidden; position: sticky; top: 10px; z-index: 10; }
 
-    button { padding: 10px; border: none; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; }
-    .btn-download { width: 100%; background: #28a745; color: white; padding: 12px; font-size: 15px; margin-top: 5px; }
-    .btn-primary { background: #007bff; color: white; flex: 1; padding: 10px; margin-top: 0; font-size: 14px; }
-    .btn-primary:hover { background: #0056b3; }
-    .btn-secondary { background: #17a2b8; color: white; width: 100%; margin-top: 4px; }
-    .btn-danger { background: #dc3545; color: white; margin-top: 4px; width: 100%; }
-    .btn-reset { background: #6c757d; color: white; width: 100%; margin-top: 5px; }
-    .tip { font-size: 11px; color: #6c757d; line-height: 1.3; }
+  h2 { margin: 0 0 5px 0; font-size: 18px; color: #333; border-bottom: 2px solid #007bff; padding-bottom: 6px; }
+  .control-group { display: flex; flex-direction: column; gap: 5px; }
+  label { font-size: 13px; font-weight: 600; color: #495057; }
+  input[type="file"], input[type="range"], select { width: 100%; cursor: pointer; }
 
-    .send-box { display: flex; gap: 8px; align-items: center; margin-top: 8px; background: #e7f1ff; padding: 10px; border-radius: 8px; border: 1px solid #b6d4fe; }
-    .send-box select { width: 110px; padding: 8px; border-radius: 6px; font-weight: bold; }
+  /* 色票：iOS Safari 會把 input[type=color] 畫成橢圓膠囊並加上系統裝飾色塊，
+     必須關掉原生外觀並自行處理 WebKit 的 swatch 偽元素，才能跟電腦端一致 */
+  input[type="color"] {
+    width: 100%;
+    height: 38px;
+    cursor: pointer;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background: none;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 3px;
+    overflow: hidden;
+  }
+  input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; border-radius: 4px; }
+  input[type="color"]::-webkit-color-swatch { border: none; border-radius: 4px; }
+  input[type="color"]::-moz-color-swatch { border: none; border-radius: 4px; }
 
-    .row-list { display: flex; flex-direction: column; gap: 6px; }
-    .row-item { display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; padding: 6px 10px; border-radius: 6px; font-size: 12px; border: 1px solid #ddd; }
-    .row-status { font-weight: bold; color: #28a745; }
-    .row-status.empty { color: #6c757d; font-weight: normal; }
-  </style>
+  .color-pickers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .color-item { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 12px; }
+  .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: bold; color: #d9534f; cursor: pointer; margin-top: 2px; }
+  .checkbox-label input { width: 18px; height: 18px; cursor: pointer; }
+
+  canvas { border: 1px solid #ddd; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.15); cursor: move; max-width: 100%; height: auto; touch-action: none; }
+  canvas.single-mode { border-radius: 50%; }
+
+  /* ---- 手機版調整 ---- */
+  @media (max-width: 700px) {
+    body { padding: 8px; }
+    .container { padding: 12px; gap: 12px; }
+    /* 預覽區移到控制項上方，方便邊看邊調；堆疊後 sticky 會造成跳動，改為靜態 */
+    .preview-area { order: -1; position: static; width: 100%; padding: 10px; }
+    .controls { width: 100%; }
+    /* 加大觸控目標，避免手指難按 */
+    button { padding: 12px; font-size: 14px; }
+    .tab-btn { padding: 12px 6px; font-size: 13px; }
+    input[type="range"] { height: 28px; }
+    .number-input-wrap input[type="number"] { font-size: 14px; padding: 6px 4px; width: 58px; }
+    .send-box select { font-size: 14px; padding: 10px; }
+    .color-item input[type="color"] { height: 44px; }
+  }
+
+  .quad-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 2px; }
+  .quad-item { background: #f8f9fa; padding: 8px; border-radius: 6px; border: 1px solid #e9ecef; }
+
+  .number-input-wrap { display: flex; align-items: center; gap: 2px; }
+  .number-input-wrap input[type="number"] { width: 50px; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; text-align: right; }
+  .unit { font-size: 11px; color: #6c757d; font-weight: bold; }
+
+  .align-btn-group { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 4px; }
+  .btn-align { background: #17a2b8; color: white; padding: 6px 4px; font-size: 12px; border-radius: 4px; text-align: center; }
+
+  button { padding: 10px; border: none; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; }
+  .btn-download { width: 100%; background: #28a745; color: white; padding: 12px; font-size: 15px; margin-top: 5px; }
+  .btn-primary { background: #007bff; color: white; flex: 1; padding: 10px; margin-top: 0; font-size: 14px; }
+  .btn-primary:hover { background: #0056b3; }
+  .btn-secondary { background: #17a2b8; color: white; width: 100%; margin-top: 4px; }
+  .btn-danger { background: #dc3545; color: white; margin-top: 4px; width: 100%; }
+  .btn-reset { background: #6c757d; color: white; width: 100%; margin-top: 5px; }
+  .tip { font-size: 11px; color: #6c757d; line-height: 1.3; }
+
+  /* 「將此貼紙發送至」按鈕位於選單左側 */
+  .send-box { display: flex; gap: 8px; align-items: center; margin-top: 8px; background: #e7f1ff; padding: 10px; border-radius: 8px; border: 1px solid #b6d4fe; }
+  .send-box select { width: 110px; padding: 8px; border-radius: 6px; font-weight: bold; }
+
+  .row-list { display: flex; flex-direction: column; gap: 6px; }
+  .row-item { display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; padding: 6px 10px; border-radius: 6px; font-size: 12px; border: 1px solid #ddd; }
+  .row-status { font-weight: bold; color: #28a745; }
+  .row-status.empty { color: #6c757d; font-weight: normal; }
+</style>
 </head>
 <body>
 
-  <div class="container">
-    <div class="controls">
-      <h2>CX紋章貼紙生成器</h2>
+<div class="container">
+  <div class="controls">
+    <h2>CX紋章貼紙生成器</h2>
 
-      <div class="tab-group">
-        <button id="tabSingle" class="tab-btn active">單貼紙微調編輯</button>
-        <button id="tabSheet" class="tab-btn">4x6 排版預覽與下載</button>
-      </div>
-
-      <div id="singlePanel">
-        <div class="control-group" id="colorSection">
-          <label>1. 外框分區調色：</label>
-          <div class="color-pickers">
-            <div class="color-item">
-              <span>紅色區</span>
-              <input type="color" id="redColor" value="#FF0000">
-            </div>
-            <div class="color-item">
-              <span>黑色區</span>
-              <input type="color" id="blackColor" value="#000000">
-            </div>
-            <div class="color-item">
-              <span>白色區</span>
-              <input type="color" id="whiteColor" value="#FFFFFF">
-            </div>
-          </div>
-        </div>
-
-        <div class="control-group">
-          <label class="checkbox-label">
-            <input type="checkbox" id="hideFrameCheck">
-            不要外框（全圖模式）
-          </label>
-        </div>
-
-        <div class="control-group" id="autoBleedWrap" style="display:none;">
-          <label class="checkbox-label" style="color:#007bff;">
-            <input type="checkbox" id="autoBleedCheck" checked>
-            無外框時自動延伸 2mm 出血
-          </label>
-        </div>
-
-        <div class="control-group">
-          <label>2. 上傳內圈圖片：</label>
-          <input type="file" id="imageInput" accept="image/*">
-          <button id="clearImgBtn" class="btn-danger">刪除內圈圖片</button>
-        </div>
-
-        <div class="control-group">
-          <label>3. 圖片微調：</label>
-          <div class="align-btn-group">
-            <button id="alignHBtn" class="btn-align">左右置中</button>
-            <button id="alignVBtn" class="btn-align">上下置中</button>
-          </div>
-
-          <div class="quad-grid">
-            <div class="quad-item">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                <span class="tip">左右位移</span>
-                <div class="number-input-wrap">
-                  <input type="number" id="posXNum" min="-180" max="180" value="0">
-                  <span class="unit">px</span>
-                </div>
-              </div>
-              <input type="range" id="posXInput" min="-180" max="180" step="1" value="0">
-            </div>
-
-            <div class="quad-item">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                <span class="tip">上下位移</span>
-                <div class="number-input-wrap">
-                  <input type="number" id="posYNum" min="-180" max="180" value="0">
-                  <span class="unit">px</span>
-                </div>
-              </div>
-              <input type="range" id="posYInput" min="-180" max="180" step="1" value="0">
-            </div>
-
-            <div class="quad-item">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                <span class="tip">圖片縮放</span>
-                <div class="number-input-wrap">
-                  <input type="number" id="scaleNum" min="10" max="300" value="100">
-                  <span class="unit">%</span>
-                </div>
-              </div>
-              <input type="range" id="scaleInput" min="10" max="300" step="1" value="100">
-            </div>
-
-            <div class="quad-item">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                <span class="tip">圖片旋轉</span>
-                <div class="number-input-wrap">
-                  <input type="number" id="rotateNum" min="0" max="360" value="0">
-                  <span class="unit">°</span>
-                </div>
-              </div>
-              <input type="range" id="rotateInput" min="0" max="360" step="1" value="0">
-            </div>
-          </div>
-        </div>
-
-        <div class="send-box">
-          <button id="sendToSheetBtn" class="btn-primary">將此貼紙發送至</button>
-          <select id="targetRowSelect">
-            <option value="0">第 1 排</option>
-            <option value="1">第 2 排</option>
-            <option value="2">第 3 排</option>
-            <option value="3">第 4 排</option>
-            <option value="4">第 5 排</option>
-            <option value="5">第 6 排</option>
-            <option value="6">第 7 排</option>
-          </select>
-        </div>
-
-        <button id="resetAllBtn" class="btn-reset">重置所有設定</button>
-      </div>
-
-      <div id="sheetPanel" style="display:none;">
-        <div class="control-group">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-            <label>4x6 7排圖案狀態：</label>
-            <button id="clearAllRowsBtn" class="btn-danger" style="width:auto; padding:4px 8px; font-size:11px; margin:0;">清空所有排數</button>
-          </div>
-          <div class="row-list" id="rowStatusContainer"></div>
-        </div>
-        <p class="tip">💡 提示：在第1頁微調好貼紙後，點擊「發送至該排」，即可在此頁預覽並導出含對位線的 4x6 列印檔。</p>
-        <button id="downloadSheetBtn" class="btn-download">下載 4x6 7-11相片列印檔 (PNG)</button>
-      </div>
-
+    <div class="tab-group">
+      <button id="tabSingle" class="tab-btn active">單貼紙微調編輯</button>
+      <button id="tabSheet" class="tab-btn">4x6 排版預覽與下載</button>
     </div>
 
-    <div class="preview-area">
-      <canvas id="canvas" width="360" height="360" class="single-mode"></canvas>
+    <div id="singlePanel">
+      <div class="control-group" id="colorSection">
+        <label>1. 外框分區調色：</label>
+        <div class="color-pickers">
+          <div class="color-item">
+            <span>紅色區</span>
+            <input type="color" id="redColor" value="#FF0000">
+          </div>
+          <div class="color-item">
+            <span>黑色區</span>
+            <input type="color" id="blackColor" value="#000000">
+          </div>
+          <div class="color-item">
+            <span>白色區</span>
+            <input type="color" id="whiteColor" value="#FFFFFF">
+          </div>
+        </div>
+      </div>
+
+      <div class="control-group" style="flex-direction:row; align-items:center; gap:10px; flex-wrap:wrap;">
+        <label class="checkbox-label" style="margin-top:0;">
+          <input type="checkbox" id="hideFrameCheck">
+          不要外框（全圖模式）
+        </label>
+        <span class="tip" style="color:#007bff;">
+          全圖模式會自動延伸 1mm 出血
+        </span>
+      </div>
+
+      <div class="control-group">
+        <label>2. 上傳內圈圖片：</label>
+        <input type="file" id="imageInput" accept="image/*">
+        <button id="clearImgBtn" class="btn-danger">刪除內圈圖片</button>
+      </div>
+
+      <div class="control-group">
+        <label>3. 圖片微調：</label>
+        <div class="align-btn-group">
+          <button id="alignHBtn" class="btn-align">左右置中</button>
+          <button id="alignVBtn" class="btn-align">上下置中</button>
+        </div>
+
+        <div class="quad-grid">
+          <div class="quad-item">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <span class="tip">左右位移</span>
+              <div class="number-input-wrap">
+                <input type="number" id="posXNum" min="-180" max="180" value="0">
+                <span class="unit">px</span>
+              </div>
+            </div>
+            <input type="range" id="posXInput" min="-180" max="180" step="1" value="0">
+          </div>
+
+          <div class="quad-item">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <span class="tip">上下位移</span>
+              <div class="number-input-wrap">
+                <input type="number" id="posYNum" min="-180" max="180" value="0">
+                <span class="unit">px</span>
+              </div>
+            </div>
+            <input type="range" id="posYInput" min="-180" max="180" step="1" value="0">
+          </div>
+
+          <div class="quad-item">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <span class="tip">圖片縮放</span>
+              <div class="number-input-wrap">
+                <input type="number" id="scaleNum" min="10" max="300" value="100">
+                <span class="unit">%</span>
+              </div>
+            </div>
+            <input type="range" id="scaleInput" min="10" max="300" step="1" value="100">
+          </div>
+
+          <div class="quad-item">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <span class="tip">圖片旋轉</span>
+              <div class="number-input-wrap">
+                <input type="number" id="rotateNum" min="0" max="360" value="0">
+                <span class="unit">°</span>
+              </div>
+            </div>
+            <input type="range" id="rotateInput" min="0" max="360" step="1" value="0">
+          </div>
+        </div>
+      </div>
+
+      <div class="send-box">
+        <button id="sendToSheetBtn" class="btn-primary">將此貼紙發送至</button>
+        <select id="targetRowSelect">
+          <option value="0">第 1 排</option>
+          <option value="1">第 2 排</option>
+          <option value="2">第 3 排</option>
+          <option value="3">第 4 排</option>
+          <option value="4">第 5 排</option>
+          <option value="5">第 6 排</option>
+          <option value="6">第 7 排</option>
+        </select>
+      </div>
+
+      <div id="sendToast" style="display:none; background:#d1e7dd; border:1px solid #a3cfbb; color:#0f5132; padding:8px 10px; border-radius:6px; font-size:12px; margin-top:6px;"></div>
+
+      <button id="resetAllBtn" class="btn-reset">重置所有設定</button>
     </div>
+
+    <div id="sheetPanel" style="display:none;">
+      <div class="control-group">
+        <label>圈直徑 — 印出來的實際大小（mm）：</label>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input type="range" id="sheetDiaInput" min="8" max="18.6" step="0.1" value="18" style="flex:1;">
+          <div class="number-input-wrap">
+            <input type="number" id="sheetDiaNum" min="8" max="18.6" step="0.1" value="18" style="width:60px;">
+            <span class="unit">mm</span>
+          </div>
+        </div>
+        <p class="tip" id="diaInfo"></p>
+      </div>
+
+      <div class="control-group" style="background:#fff8e1; border:1px solid #ffe082; border-radius:8px; padding:10px;">
+        <label>📏 實測校準（換店家／換機器時重做一次）</label>
+        <p class="tip" style="margin:2px 0 6px 0;">
+          目前依 7-11 ibon 規格設定（紙張 100×148mm，機台會等比縮放並留白邊）。<br>
+          若印出來尺寸不符，印一張用尺量最外圈直徑填入，即可自動修正。
+        </p>
+        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+          <span class="tip">目標</span>
+          <div class="number-input-wrap">
+            <input type="number" id="calTarget" step="0.1" value="18" style="width:52px;">
+            <span class="unit">mm</span>
+          </div>
+          <span class="tip">／ 實際量到</span>
+          <div class="number-input-wrap">
+            <input type="number" id="calMeasured" step="0.1" placeholder="18.0" style="width:52px;">
+            <span class="unit">mm</span>
+          </div>
+          <button id="calApplyBtn" class="btn-secondary" style="width:auto; padding:8px 12px; margin:0;">套用</button>
+        </div>
+        <p class="tip" id="calResult" style="margin-top:6px;"></p>
+      </div>
+
+      <div class="control-group">
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <label class="checkbox-label" style="color:#495057; margin-top:0;">
+            <input type="checkbox" id="showCutLineCheck" checked>
+            顯示裁切對位線
+          </label>
+          <div id="cutLineOptions" style="display:flex; gap:6px; align-items:center;">
+            <button id="cutLineBlackBtn" class="btn-secondary" style="width:auto; padding:7px 12px; margin:0; font-size:12px; background:#000000;">黑</button>
+            <button id="cutLineOrangeBtn" class="btn-secondary" style="width:auto; padding:7px 12px; margin:0; font-size:12px; background:#ff5722;">橘</button>
+            <button id="cutLineCyanBtn" class="btn-secondary" style="width:auto; padding:7px 12px; margin:0; font-size:12px; background:#00bcd4;">青</button>
+          </div>
+        </div>
+        <p class="tip">💡 深色貼紙用淺色線比較看得清楚；不需要線時可直接取消勾選。</p>
+      </div>
+
+      <div class="control-group">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+          <label>4x6 7排圖案狀態：</label>
+          <button id="clearAllRowsBtn" class="btn-danger" style="width:auto; padding:4px 8px; font-size:11px; margin:0;">清空所有排數</button>
+        </div>
+        <div class="row-list" id="rowStatusContainer"></div>
+      </div>
+      <p class="tip">💡 提示：在第1頁微調好貼紙後，點擊「將此貼紙發送至」，即可在此頁預覽並導出含對位線的 4x6 列印檔。</p>
+      <button id="downloadSheetBtn" class="btn-download">下載 4x6 7-11相片列印檔 (PNG)</button>
+    </div>
+
   </div>
 
-  <script>
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
+  <div class="preview-area">
+    <canvas id="canvas" width="360" height="360" class="single-mode"></canvas>
+  </div>
+</div>
 
-    let currentMode = 'single';
-    let svgDom = null;
-    let templateSvgImg = new Image();
-    let userImg = null;
+<script>
+  // ============================================================
+  // 外框 SVG：內嵌於檔案中，讓整份 index.html 成為單一檔案即可直接
+  // 在 Artifacts / 瀏覽器執行（不再依賴外部檔案 fetch）。
+  //
+  // 目前內嵌的是「不含商標文字／圖案」的示意版三色分區外框：
+  // 紅／黑兩大色塊 + 白色分隔細縫 + 刻度＋三角形＋弧形裝飾（皆為白色），
+  // 版面結構與比例參考你提供的色塊分布圖，但完全重新繪製、不含任何
+  // 商標文字或官方圖案，僅供驗證調色與置中邏輯。
+  //
+  // 已用 #red-layer / #black-layer / #white-layer 三個群組 id 分層，
+  // 之後若你有正式授權的向量外框檔，直接把整段 FRAME_SVG_MARKUP
+  // 換成正式內容（維持同樣的 id 命名）即可沿用，不需要改其他程式碼。
+  // ============================================================
+  const FRAME_SVG_MARKUP = `<svg version="1.1" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+  <g id="black-layer" fill="#000000">
+    <path d="M227.15,6.89 A195,195 0 1,1 117.59,376.73 L138.72,331.41 A145,145 0 1,0 220.19,56.41 Z"/>
+  </g>
+  <g id="red-layer" fill="#FF0000">
+    <path d="M93.80,363.55 A195,195 0 0,1 183.00,5.74 L187.36,55.55 A145,145 0 0,0 121.03,321.61 Z"/>
+  </g>
+  <g id="white-layer" fill="#FFFFFF">
+    <path d="M117.59,376.73 A195,195 0 0,1 93.80,363.55 L121.03,321.61 A145,145 0 0,0 138.72,331.41 Z"/>
+    <path d="M183.00,5.74 A195,195 0 0,1 227.15,6.89 L220.19,56.41 A145,145 0 0,0 187.36,55.55 Z"/>
+    <path d="M284,345.49 A168,168 0 0,1 142.54,357.87" stroke="#FFFFFF" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <g>
+      <line x1="200" y1="155" x2="200" y2="185" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" transform="rotate(20 200 200)"/>
+      <line x1="200" y1="155" x2="200" y2="185" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" transform="rotate(28 200 200)"/>
+      <line x1="200" y1="155" x2="200" y2="185" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" transform="rotate(36 200 200)"/>
+      <line x1="200" y1="155" x2="200" y2="185" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" transform="rotate(44 200 200)"/>
+      <line x1="200" y1="155" x2="200" y2="185" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" transform="rotate(52 200 200)"/>
+      <line x1="200" y1="155" x2="200" y2="185" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" transform="rotate(60 200 200)"/>
+      <line x1="200" y1="155" x2="200" y2="185" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" transform="rotate(68 200 200)"/>
+      <line x1="200" y1="155" x2="200" y2="185" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" transform="rotate(76 200 200)"/>
+    </g>
+    <g transform="rotate(97 200 200)">
+      <path d="M190,140 L210,140 L200,160 Z"/>
+      <path d="M190,163 L210,163 L200,183 Z"/>
+      <path d="M190,186 L210,186 L200,206 Z"/>
+    </g>
+  </g>
+</svg>`;
 
-    let savedRowCanvases = [null, null, null, null, null, null, null];
+  // ============================================================
+  // 物理尺寸假設（可依實際成品規格調整這幾個常數即可，不用改其他程式碼）
+  // ============================================================
+  const FRAME_INNER_RADIUS_PX = 138;      // 有外框時，內圈開孔（照片可視範圍）半徑
+  const BLEED_MM = 1;                     // 出血延伸量 1mm（裁切圈 + 1mm = 印刷邊界）
 
-    let baseFitScale = 1.0; 
-    let userScaleMultiplier = 1.0; 
-    let imgState = { x: 180, y: 180, angle: 0 };
-    let isDragging = false;
-    let startX, startY;
+  // ---- 7-11 ibon 4x6 實際規格 ----
+  // 官方規格：專用紙 10cm x 14.8cm（不是國際 4x6 吋的 101.6 x 152.4mm）。
+  // 機台行為：「圖片會依選擇的圖檔等比縮放至可列印邊界為止」——
+  // 等比置中、四周留白邊，不裁切也不拉伸。
+  const PAPER_WIDTH_MM = 100;
+  const PAPER_HEIGHT_MM = 148;
 
-    let initialPinchDist = null;
-    let initialScaleMultiplier = 1.0;
+  // 影像實際印在紙上的高度（mm）。這才是決定成品大小的關鍵值。
+  // 由實測反推：設定 18mm 印出 16.5mm → 139.7mm（上下白邊各約 4.2mm）。
+  // 換機台或換店家時，用排版頁的「實測校準」重新量測即可。
+  let PRINT_AREA_HEIGHT_MM = 139.7;
 
-    function updateRowStatusUI() {
-      const container = document.getElementById('rowStatusContainer');
-      container.innerHTML = '';
-      for (let i = 0; i < 7; i++) {
-        const div = document.createElement('div');
-        div.className = 'row-item';
-        const isSet = !!savedRowCanvases[i];
-        div.innerHTML = `
-          <span>第 ${i + 1} 排 (5張貼紙)：</span>
-          <span class="row-status ${isSet ? '' : 'empty'}">${isSet ? '✓ 已派發圖案' : '尚未設定 (留空)'}</span>
-          ${isSet ? `<button onclick="clearSingleRow(${i})" style="padding:2px 6px; font-size:11px; background:#dc3545; color:white; border:none; border-radius:4px; cursor:pointer;">清除</button>` : ''}
-        `;
-        container.appendChild(div);
+  const FILE_W_PX = 1200, FILE_H_PX = 1800;   // 輸出檔案像素尺寸
+  // 檔案長寬比 1.5 高於紙張的 1.48，因此是「高度」先碰到邊界，寬度依比例縮放
+  function printAreaWidthMM() {
+    return PRINT_AREA_HEIGHT_MM * FILE_W_PX / FILE_H_PX;
+  }
+
+  const SHEET_ROWS = 7;
+  const SHEET_COLS = 5;
+  const CUT_LINE_INSET_MM = 1;           // 切刀對位線往內縮 1mm（18mm 圈 → 16mm 裁切）
+  const ROW_GAP_MM = 1;                  // 排與排之間的固定間距（mm），方便裁切
+
+  // 每個圈「印出來的實際直徑」（mm）——所見即所得，不再是檔案上的抽象數值
+  let STICKER_PRINTED_DIAMETER_MM = 18;
+
+  // 單貼紙編輯畫布固定 360px 代表一整顆貼紙，故比例隨實際直徑換算，
+  // 確保 1mm 出血與 16mm 裁切圈在任何直徑設定下都維持正確比例
+  function pxPerMMSingle() { return 360 / STICKER_PRINTED_DIAMETER_MM; }
+  function cutRadiusPx() {
+    return (STICKER_PRINTED_DIAMETER_MM / 2 - BLEED_MM) * pxPerMMSingle();
+  }
+
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+
+  let currentMode = 'single';
+  let svgDom = null;
+  let svgNaturalSize = { w: 360, h: 360 };
+  let templateSvgImg = new Image();
+  let userImg = null;
+
+  let savedRowCanvases = [null, null, null, null, null, null, null];
+
+  let baseFitScale = 1.0;
+  let userScaleMultiplier = 1.0;
+  let imgState = { x: 180, y: 180, angle: 0 };
+  let isDragging = false;
+  let startX, startY;
+
+  let initialPinchDist = null;
+  let initialScaleMultiplier = 1.0;
+
+  function updateRowStatusUI() {
+    const container = document.getElementById('rowStatusContainer');
+    container.innerHTML = '';
+    for (let i = 0; i < 7; i++) {
+      const div = document.createElement('div');
+      div.className = 'row-item';
+      const isSet = !!savedRowCanvases[i];
+      div.innerHTML = `
+        <span>第 ${i + 1} 排 (5張貼紙)：</span>
+        <span class="row-status ${isSet ? '' : 'empty'}">${isSet ? '✓ 已派發圖案' : '尚未設定 (留空)'}</span>
+        ${isSet ? `<button onclick="clearSingleRow(${i})" style="padding:2px 6px; font-size:11px; background:#dc3545; color:white; border:none; border-radius:4px; cursor:pointer;">清除</button>` : ''}
+      `;
+      container.appendChild(div);
+    }
+  }
+
+  window.clearSingleRow = function (idx) {
+    savedRowCanvases[idx] = null;
+    updateRowStatusUI();
+    if (currentMode === 'sheet') draw();
+  };
+
+  // ---- 解析內嵌的外框 SVG（取代原本對外部檔案的 fetch）----
+  (function initFrameSvg() {
+    const parser = new DOMParser();
+    const svgDoc = parser.parseFromString(FRAME_SVG_MARKUP, "image/svg+xml");
+    svgDom = svgDoc.querySelector('svg');
+    if (svgDom) {
+      svgNaturalSize = getSvgNaturalSize(svgDom);
+    }
+    updateSvgColorsAndDraw();
+  })();
+
+  function getSvgNaturalSize(svgEl) {
+    const vb = svgEl.getAttribute('viewBox');
+    if (vb) {
+      const parts = vb.trim().split(/\s+/).map(Number);
+      if (parts.length === 4 && parts[2] > 0 && parts[3] > 0) {
+        return { w: parts[2], h: parts[3] };
       }
     }
+    const w = parseFloat(svgEl.getAttribute('width')) || 360;
+    const h = parseFloat(svgEl.getAttribute('height')) || 360;
+    return { w, h };
+  }
 
-    window.clearSingleRow = function(idx) {
-      savedRowCanvases[idx] = null;
+  document.getElementById('tabSingle').addEventListener('click', () => {
+    currentMode = 'single';
+    document.getElementById('tabSingle').classList.add('active');
+    document.getElementById('tabSheet').classList.remove('active');
+    document.getElementById('singlePanel').style.display = 'block';
+    document.getElementById('sheetPanel').style.display = 'none';
+
+    canvas.width = 360;
+    canvas.height = 360;
+    canvas.classList.add('single-mode');
+    draw();
+  });
+
+  document.getElementById('tabSheet').addEventListener('click', () => {
+    currentMode = 'sheet';
+    document.getElementById('tabSheet').classList.add('active');
+    document.getElementById('tabSingle').classList.remove('active');
+    document.getElementById('singlePanel').style.display = 'none';
+    document.getElementById('sheetPanel').style.display = 'block';
+
+    updateRowStatusUI();
+    // 4x6 相片比例 = 2:3，預覽畫布採等比例（400 x 600）
+    canvas.width = 400;
+    canvas.height = 600;
+    canvas.classList.remove('single-mode');
+    draw();
+  });
+
+  document.getElementById('sendToSheetBtn').addEventListener('click', () => {
+    const rowSelect = document.getElementById('targetRowSelect');
+    const targetRow = parseInt(rowSelect.value);
+
+    const snapshotCanvas = document.createElement('canvas');
+    snapshotCanvas.width = 360;
+    snapshotCanvas.height = 360;
+    const snapCtx = snapshotCanvas.getContext('2d');
+
+    drawSingleSticker(snapCtx, 180, 180, 360);
+
+    savedRowCanvases[targetRow] = snapshotCanvas;
+
+    // 自動跳到下一排，連續發送時不用每次手動選；已在第 7 排則停在原地
+    const nextRow = targetRow + 1;
+    const hasNext = nextRow < 7;
+    if (hasNext) rowSelect.value = String(nextRow);
+
+    showSendToast(targetRow, hasNext ? nextRow : null);
+
+    if (currentMode === 'sheet') {
       updateRowStatusUI();
-      if (currentMode === 'sheet') draw();
+      draw();
+    }
+  });
+
+  // 用行內提示取代 alert()：alert 會中斷操作、且在手機上每次都要多按一下確定，
+  // 連續發送 7 排時特別惱人
+  let toastTimer = null;
+  function showSendToast(doneRow, nextRow) {
+    const box = document.getElementById('sendToast');
+    box.innerHTML = `✅ 已發送至<b>第 ${doneRow + 1} 排</b>（該排 5 張）` +
+      (nextRow !== null
+        ? `　→　已自動跳至<b>第 ${nextRow + 1} 排</b>`
+        : `　→　<b>已是最後一排</b>`);
+    box.style.display = 'block';
+
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { box.style.display = 'none'; }, 2600);
+  }
+
+  // ---- 圈直徑設定（滑桿 + 數字輸入雙向綁定）----
+  const sheetDiaInput = document.getElementById('sheetDiaInput');
+  const sheetDiaNum = document.getElementById('sheetDiaNum');
+  const diaInfo = document.getElementById('diaInfo');
+
+  // 依目前列印區域，算出 7 排 5 欄放得下的最大直徑
+  function maxDiameterMM() {
+    const byWidth = printAreaWidthMM() / SHEET_COLS;
+    const byHeight = (PRINT_AREA_HEIGHT_MM - (SHEET_ROWS - 1) * ROW_GAP_MM) / SHEET_ROWS;
+    return Math.floor(Math.min(byWidth, byHeight) * 10) / 10;
+  }
+
+  function setSheetDiameter(val, syncBoth = true) {
+    let v = parseFloat(val);
+    if (isNaN(v)) v = 18;
+    const max = maxDiameterMM();
+    v = Math.min(Math.max(v, 8), max);
+    v = Math.round(v * 10) / 10;
+    STICKER_PRINTED_DIAMETER_MM = v;
+
+    sheetDiaInput.max = max;
+    sheetDiaNum.max = max;
+    if (syncBoth) {
+      sheetDiaInput.value = v;
+      sheetDiaNum.value = v;
+    }
+
+    const px = v * (FILE_H_PX / PRINT_AREA_HEIGHT_MM);
+    const cutDia = v - BLEED_MM * 2;
+    const totalW = SHEET_COLS * v;
+    const totalH = SHEET_ROWS * v + (SHEET_ROWS - 1) * ROW_GAP_MM;
+
+    diaInfo.innerHTML =
+      `這是<b>印出來的實際直徑</b>（檔案內 ${px.toFixed(1)} px），裁切後成品約 <b>${cutDia.toFixed(1)} mm</b>。` +
+      `<br>排版佔用 ${totalW.toFixed(1)} × ${totalH.toFixed(1)} mm ／ 可印區 ` +
+      `${printAreaWidthMM().toFixed(1)} × ${PRINT_AREA_HEIGHT_MM.toFixed(1)} mm（上限 ${max} mm）`;
+
+    if (currentMode === 'sheet') draw();
+  }
+  sheetDiaInput.addEventListener('input', (e) => setSheetDiameter(e.target.value));
+  sheetDiaNum.addEventListener('input', (e) => setSheetDiameter(e.target.value, false));
+
+  // ---- 實測校準 ----
+  // 印出來的尺寸不符時，代表「可列印區域高度」的假設有誤，
+  // 而非圈直徑設錯——修正 PRINT_AREA_HEIGHT_MM 才是治本做法。
+  document.getElementById('calApplyBtn').addEventListener('click', () => {
+    const target = parseFloat(document.getElementById('calTarget').value);
+    const measured = parseFloat(document.getElementById('calMeasured').value);
+    const result = document.getElementById('calResult');
+
+    if (isNaN(target) || isNaN(measured) || measured <= 0 || target <= 0) {
+      result.innerHTML = '<span style="color:#dc3545;">請填入有效的目標與實測數值。</span>';
+      return;
+    }
+
+    // 設定 D 卻印出 M，表示實際可印高度 = 目前假設值 × M / D
+    const setD = STICKER_PRINTED_DIAMETER_MM;
+    PRINT_AREA_HEIGHT_MM = PRINT_AREA_HEIGHT_MM * measured / setD;
+
+    setSheetDiameter(target);
+
+    const applied = STICKER_PRINTED_DIAMETER_MM;
+    const note = Math.abs(applied - target) > 0.05
+      ? `（受版面限制，已調整為 ${applied} mm）`
+      : '';
+    result.innerHTML =
+      `✅ 已校準：實際可印區域為 <b>${printAreaWidthMM().toFixed(1)} × ${PRINT_AREA_HEIGHT_MM.toFixed(1)} mm</b>` +
+      `（紙張 ${PAPER_WIDTH_MM}×${PAPER_HEIGHT_MM}mm，四周白邊約 ` +
+      `${((PAPER_WIDTH_MM - printAreaWidthMM()) / 2).toFixed(1)}／` +
+      `${((PAPER_HEIGHT_MM - PRINT_AREA_HEIGHT_MM) / 2).toFixed(1)} mm）。` +
+      `<br>圈直徑已設為 <b>${applied} mm</b>${note}，重新下載即可印出正確尺寸。`;
+  });
+
+  setSheetDiameter(STICKER_PRINTED_DIAMETER_MM);
+
+  // ---- 裁切對位線：開關 + 三種固定顏色 ----
+  const CUT_LINE_WIDTH_PX = 0.5;   // 線寬固定（以預覽畫布 400px 寬為基準）
+  let cutLineColorValue = '#000000';
+
+  const showCutLineCheck = document.getElementById('showCutLineCheck');
+  const cutLineOptions = document.getElementById('cutLineOptions');
+
+  function redrawSheet() {
+    if (currentMode === 'sheet') draw();
+  }
+
+  showCutLineCheck.addEventListener('change', (e) => {
+    // 關閉時把顏色按鈕淡化並停用，讓狀態一目了然
+    cutLineOptions.style.opacity = e.target.checked ? '1' : '0.35';
+    cutLineOptions.style.pointerEvents = e.target.checked ? 'auto' : 'none';
+    redrawSheet();
+  });
+
+  const cutLineBtns = {
+    '#000000': document.getElementById('cutLineBlackBtn'),
+    '#ff5722': document.getElementById('cutLineOrangeBtn'),
+    '#00bcd4': document.getElementById('cutLineCyanBtn')
+  };
+
+  function setCutLineColor(hex) {
+    cutLineColorValue = hex;
+    // 用外框標示目前選中的顏色，避免不知道現在是哪一色
+    Object.entries(cutLineBtns).forEach(([c, btn]) => {
+      btn.style.outline = (c === hex) ? '3px solid #007bff' : 'none';
+      btn.style.outlineOffset = '1px';
+    });
+    redrawSheet();
+  }
+  Object.entries(cutLineBtns).forEach(([hex, btn]) => {
+    btn.addEventListener('click', () => setCutLineColor(hex));
+  });
+  setCutLineColor(cutLineColorValue);
+
+  document.getElementById('clearAllRowsBtn').addEventListener('click', () => {
+    savedRowCanvases = [null, null, null, null, null, null, null];
+    updateRowStatusUI();
+    if (currentMode === 'sheet') draw();
+  });
+
+  function syncPositionUI() {
+    const offsetX = Math.round(imgState.x - 180);
+    const offsetY = Math.round(imgState.y - 180);
+    document.getElementById('posXInput').value = offsetX;
+    document.getElementById('posXNum').value = offsetX;
+    document.getElementById('posYInput').value = offsetY;
+    document.getElementById('posYNum').value = offsetY;
+  }
+
+  function syncScaleUI() {
+    const scalePct = Math.round(userScaleMultiplier * 100);
+    document.getElementById('scaleInput').value = scalePct;
+    document.getElementById('scaleNum').value = scalePct;
+  }
+
+  function calculateBaseFitScale() {
+    if (!userImg) return;
+    const hideFrame = document.getElementById('hideFrameCheck').checked;
+    const targetDiameter = hideFrame ? (cutRadiusPx() * 2) : (FRAME_INNER_RADIUS_PX * 2);
+    const minEdge = Math.min(userImg.width, userImg.height);
+
+    baseFitScale = targetDiameter / minEdge;
+    userScaleMultiplier = 1.0;
+    imgState.x = 180;
+    imgState.y = 180;
+
+    syncPositionUI();
+    syncScaleUI();
+  }
+
+  document.getElementById('imageInput').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        userImg = new Image();
+        userImg.onload = () => {
+          calculateBaseFitScale();
+          draw();
+        };
+        userImg.src = evt.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  const posXInput = document.getElementById('posXInput');
+  const posXNum = document.getElementById('posXNum');
+  posXInput.addEventListener('input', (e) => { posXNum.value = e.target.value; imgState.x = 180 + parseFloat(e.target.value); draw(); });
+  posXNum.addEventListener('input', (e) => { let val = parseFloat(e.target.value) || 0; posXInput.value = val; imgState.x = 180 + val; draw(); });
+
+  const posYInput = document.getElementById('posYInput');
+  const posYNum = document.getElementById('posYNum');
+  posYInput.addEventListener('input', (e) => { posYNum.value = e.target.value; imgState.y = 180 + parseFloat(e.target.value); draw(); });
+  posYNum.addEventListener('input', (e) => { let val = parseFloat(e.target.value) || 0; posYInput.value = val; imgState.y = 180 + val; draw(); });
+
+  document.getElementById('alignHBtn').addEventListener('click', () => { imgState.x = 180; syncPositionUI(); draw(); });
+  document.getElementById('alignVBtn').addEventListener('click', () => { imgState.y = 180; syncPositionUI(); draw(); });
+  document.getElementById('clearImgBtn').addEventListener('click', () => { userImg = null; document.getElementById('imageInput').value = ''; draw(); });
+
+  document.getElementById('hideFrameCheck').addEventListener('change', (e) => {
+    const colorSection = document.getElementById('colorSection');
+    if (e.target.checked) {
+      colorSection.style.opacity = '0.4';
+      colorSection.style.pointerEvents = 'none';
+    } else {
+      colorSection.style.opacity = '1';
+      colorSection.style.pointerEvents = 'auto';
+    }
+    if (userImg) calculateBaseFitScale();
+    draw();
+  });
+
+  document.getElementById('resetAllBtn').addEventListener('click', () => {
+    document.getElementById('hideFrameCheck').checked = false;
+    document.getElementById('colorSection').style.opacity = '1';
+    document.getElementById('colorSection').style.pointerEvents = 'auto';
+    document.getElementById('redColor').value = '#FF0000';
+    document.getElementById('blackColor').value = '#000000';
+    document.getElementById('whiteColor').value = '#FFFFFF';
+    document.getElementById('rotateInput').value = '0';
+    document.getElementById('rotateNum').value = '0';
+    imgState.angle = 0;
+    if (userImg) {
+      calculateBaseFitScale();
+    } else {
+      document.getElementById('scaleInput').value = '100';
+      document.getElementById('scaleNum').value = '100';
+      userScaleMultiplier = 1.0;
+      imgState = { x: 180, y: 180, angle: 0 };
+      syncPositionUI();
+    }
+    updateSvgColorsAndDraw();
+  });
+
+  const scaleInput = document.getElementById('scaleInput');
+  const scaleNum = document.getElementById('scaleNum');
+  scaleInput.addEventListener('input', (e) => { scaleNum.value = e.target.value; userScaleMultiplier = parseFloat(e.target.value) / 100; draw(); });
+  scaleNum.addEventListener('input', (e) => { let val = parseFloat(e.target.value) || 100; scaleInput.value = val; userScaleMultiplier = val / 100; draw(); });
+
+  const rotateInput = document.getElementById('rotateInput');
+  const rotateNum = document.getElementById('rotateNum');
+  rotateInput.addEventListener('input', (e) => { rotateNum.value = e.target.value; imgState.angle = parseInt(e.target.value) || 0; draw(); });
+  rotateNum.addEventListener('input', (e) => { let val = parseInt(e.target.value) || 0; rotateInput.value = val; imgState.angle = val; draw(); });
+
+  document.getElementById('redColor').addEventListener('input', updateSvgColorsAndDraw);
+  document.getElementById('blackColor').addEventListener('input', updateSvgColorsAndDraw);
+  document.getElementById('whiteColor').addEventListener('input', updateSvgColorsAndDraw);
+
+  // ---- 調色：優先用 #red-layer/#black-layer/#white-layer 這類 id，
+  //      找不到時 fallback 成依實際顏色值（紅/黑/白）比對替換 ----
+  // Rhino 匯出的 SVG 不保留圖層名稱，只能靠顏色值辨識。
+  // Rhino 可能輸出 "rgb(255, 0, 0)"（含空格）或 "#FF0000"，此處統一正規化後比對。
+  function normalizeColor(v) { return (v || '').trim().toLowerCase().replace(/\s+/g, ''); }
+  const RED_SET = new Set(['#ff0000', '#f00', 'red', 'rgb(255,0,0)']);
+  const BLACK_SET = new Set(['#000000', '#000', 'black', 'rgb(0,0,0)']);
+  const WHITE_SET = new Set(['#ffffff', '#fff', 'white', 'rgb(255,255,255)']);
+
+  function recolorFrameSvg(rootSvg, cRed, cBlack, cWhite) {
+    if (!rootSvg) return;
+    const handled = new Set();
+
+    // 1) 明確以 id 指定的圖層
+    [['#red-layer', cRed], ['#black-layer', cBlack], ['#white-layer', cWhite]].forEach(([sel, color]) => {
+      const el = rootSvg.querySelector(sel);
+      if (!el) return;
+      const nodes = [el, ...el.querySelectorAll('*')];
+      nodes.forEach(node => {
+        if (node.hasAttribute('fill') && node.getAttribute('fill') !== 'none') node.setAttribute('fill', color);
+        if (node.hasAttribute('stroke') && node.getAttribute('stroke') !== 'none') node.setAttribute('stroke', color);
+        handled.add(node);
+      });
+    });
+
+    // 2) fallback：依實際顏色值比對
+    //    （Rhino 匯出的 SVG 沒有圖層 id，只能靠純紅/純黑/純白的顏色值辨識）
+    const pickColor = (v) => {
+      const c = normalizeColor(v);
+      if (RED_SET.has(c)) return cRed;
+      if (BLACK_SET.has(c)) return cBlack;
+      if (WHITE_SET.has(c)) return cWhite;
+      return null;
     };
 
-    fetch('外框.svg')
-      .then(res => res.text())
-      .then(xmlText => {
-        const parser = new DOMParser();
-        const svgDoc = parser.parseFromString(xmlText, "image/svg+xml");
-        svgDom = svgDoc.querySelector('svg');
-        updateSvgColorsAndDraw();
-      })
-      .catch(() => {});
+    rootSvg.querySelectorAll('*').forEach(el => {
+      if (handled.has(el)) return;
 
-    document.getElementById('tabSingle').addEventListener('click', () => {
-      currentMode = 'single';
-      document.getElementById('tabSingle').classList.add('active');
-      document.getElementById('tabSheet').classList.remove('active');
-      document.getElementById('singlePanel').style.display = 'block';
-      document.getElementById('sheetPanel').style.display = 'none';
-      
-      canvas.width = 360;
-      canvas.height = 360;
-      canvas.classList.add('single-mode');
-      draw();
-    });
+      ['fill', 'stroke'].forEach(attr => {
+        const newColor = pickColor(el.getAttribute(attr));
+        if (newColor) el.setAttribute(attr, newColor);
+      });
 
-    document.getElementById('tabSheet').addEventListener('click', () => {
-      currentMode = 'sheet';
-      document.getElementById('tabSheet').classList.add('active');
-      document.getElementById('tabSingle').classList.remove('active');
-      document.getElementById('singlePanel').style.display = 'none';
-      document.getElementById('sheetPanel').style.display = 'block';
-
-      updateRowStatusUI();
-      canvas.width = 400;
-      canvas.height = 592;
-      canvas.classList.remove('single-mode');
-      draw();
-    });
-
-    document.getElementById('sendToSheetBtn').addEventListener('click', () => {
-      const targetRow = parseInt(document.getElementById('targetRowSelect').value);
-      
-      const snapshotCanvas = document.createElement('canvas');
-      snapshotCanvas.width = 360;
-      snapshotCanvas.height = 360;
-      const snapCtx = snapshotCanvas.getContext('2d');
-
-      drawSingleSticker(snapCtx, 180, 180, 360);
-
-      savedRowCanvases[targetRow] = snapshotCanvas;
-
-      alert(`已成功將目前貼紙發送至「第 ${targetRow + 1} 排」 (共 5 張)！`);
-    });
-
-    document.getElementById('clearAllRowsBtn').addEventListener('click', () => {
-      savedRowCanvases = [null, null, null, null, null, null, null];
-      updateRowStatusUI();
-      if (currentMode === 'sheet') draw();
-    });
-
-    function syncPositionUI() {
-      const offsetX = Math.round(imgState.x - 180);
-      const offsetY = Math.round(imgState.y - 180);
-      document.getElementById('posXInput').value = offsetX;
-      document.getElementById('posXNum').value = offsetX;
-      document.getElementById('posYInput').value = offsetY;
-      document.getElementById('posYNum').value = offsetY;
-    }
-
-    function syncScaleUI() {
-      const scalePct = Math.round(userScaleMultiplier * 100);
-      document.getElementById('scaleInput').value = scalePct;
-      document.getElementById('scaleNum').value = scalePct;
-    }
-
-    function calculateBaseFitScale() {
-      if (!userImg) return;
-      const hideFrame = document.getElementById('hideFrameCheck').checked;
-      const targetDiameter = hideFrame ? 360 : (138 * 2);
-      const minEdge = Math.min(userImg.width, userImg.height);
-      
-      baseFitScale = targetDiameter / minEdge; 
-      userScaleMultiplier = 1.0;
-      imgState.x = 180;
-      imgState.y = 180;
-      
-      syncPositionUI();
-      syncScaleUI();
-    }
-
-    document.getElementById('imageInput').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-          userImg = new Image();
-          userImg.onload = () => {
-            calculateBaseFitScale();
-            draw();
-          };
-          userImg.src = evt.target.result;
-        };
-        reader.readAsDataURL(file);
+      // 有些工具（含部分 Rhino 版本／經 Illustrator 轉存）把顏色寫在 style 裡，
+      // 例如 style="fill:rgb(255,0,0);stroke:none"，需一併處理
+      const style = el.getAttribute('style');
+      if (style) {
+        const newStyle = style.replace(/(fill|stroke)\s*:\s*([^;]+)/gi, (match, prop, val) => {
+          const newColor = pickColor(val);
+          return newColor ? `${prop}:${newColor}` : match;
+        });
+        if (newStyle !== style) el.setAttribute('style', newStyle);
       }
     });
+  }
 
-    const posXInput = document.getElementById('posXInput');
-    const posXNum = document.getElementById('posXNum');
-    posXInput.addEventListener('input', (e) => { posXNum.value = e.target.value; imgState.x = 180 + parseFloat(e.target.value); draw(); });
-    posXNum.addEventListener('input', (e) => { let val = parseFloat(e.target.value) || 0; posXInput.value = val; imgState.x = 180 + val; draw(); });
+  function updateSvgColorsAndDraw() {
+    if (svgDom) {
+      const cRed = document.getElementById('redColor').value;
+      const cBlack = document.getElementById('blackColor').value;
+      const cWhite = document.getElementById('whiteColor').value;
 
-    const posYInput = document.getElementById('posYInput');
-    const posYNum = document.getElementById('posYNum');
-    posYInput.addEventListener('input', (e) => { posYNum.value = e.target.value; imgState.y = 180 + parseFloat(e.target.value); draw(); });
-    posYNum.addEventListener('input', (e) => { let val = parseFloat(e.target.value) || 0; posYInput.value = val; imgState.y = 180 + val; draw(); });
+      recolorFrameSvg(svgDom, cRed, cBlack, cWhite);
 
-    document.getElementById('alignHBtn').addEventListener('click', () => { imgState.x = 180; syncPositionUI(); draw(); });
-    document.getElementById('alignVBtn').addEventListener('click', () => { imgState.y = 180; syncPositionUI(); draw(); });
-    document.getElementById('clearImgBtn').addEventListener('click', () => { userImg = null; document.getElementById('imageInput').value = ''; draw(); });
+      const svgString = new XMLSerializer().serializeToString(svgDom);
+      const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(svgBlob);
 
-    document.getElementById('hideFrameCheck').addEventListener('change', (e) => {
-      const colorSection = document.getElementById('colorSection');
-      const autoBleedWrap = document.getElementById('autoBleedWrap');
-      if (e.target.checked) { 
-        colorSection.style.opacity = '0.4'; 
-        colorSection.style.pointerEvents = 'none'; 
-        autoBleedWrap.style.display = 'block';
-      } else { 
-        colorSection.style.opacity = '1'; 
-        colorSection.style.pointerEvents = 'auto'; 
-        autoBleedWrap.style.display = 'none';
-      }
-      if (userImg) calculateBaseFitScale();
+      templateSvgImg.onload = () => { draw(); URL.revokeObjectURL(url); };
+      templateSvgImg.src = url;
+    } else {
       draw();
-    });
+    }
+  }
 
-    document.getElementById('autoBleedCheck').addEventListener('change', draw);
+  // ---- 放射狀邊緣延伸出血 ----
+  // 不放大圖片本身，而是把 innerR（16mm裁切線）邊緣的像素顏色，
+  // 沿著相同角度往外「複製貼上」到 outerR（18mm印刷邊界）為止，
+  // 產生一圈貼齊原圖邊緣色調的出血環，裁切線以內的內容完全不受影響。
+  function applyRadialEdgeBleed(ctx, cx, cy, innerR, outerR) {
+    if (outerR <= innerR) return;
 
-    document.getElementById('resetAllBtn').addEventListener('click', () => {
-      document.getElementById('hideFrameCheck').checked = false;
-      document.getElementById('autoBleedCheck').checked = true;
-      document.getElementById('autoBleedWrap').style.display = 'none';
-      document.getElementById('colorSection').style.opacity = '1';
-      document.getElementById('colorSection').style.pointerEvents = 'auto';
-      document.getElementById('redColor').value = '#FF0000';
-      document.getElementById('blackColor').value = '#000000';
-      document.getElementById('whiteColor').value = '#FFFFFF';
-      document.getElementById('rotateInput').value = '0';
-      document.getElementById('rotateNum').value = '0';
-      imgState.angle = 0;
-      if (userImg) {
-        calculateBaseFitScale();
-      } else {
-        document.getElementById('scaleInput').value = '100';
-        document.getElementById('scaleNum').value = '100';
-        userScaleMultiplier = 1.0;
-        imgState = { x: 180, y: 180, angle: 0 };
-        syncPositionUI();
+    const boxR = Math.ceil(outerR) + 1;
+    const left = Math.max(0, Math.floor(cx - boxR));
+    const top = Math.max(0, Math.floor(cy - boxR));
+    const right = Math.min(ctx.canvas.width, Math.ceil(cx + boxR));
+    const bottom = Math.min(ctx.canvas.height, Math.ceil(cy + boxR));
+    const w = right - left;
+    const h = bottom - top;
+    if (w <= 0 || h <= 0) return;
+
+    const imgData = ctx.getImageData(left, top, w, h);
+    const data = imgData.data;
+
+    // canvas 的 clip() 在邊界處會有約 1~2px 的反鋸齒（半透明漸層），
+    // 若出血只從 innerR「以外」開始覆蓋，會留下這圈半透明像素沒被蓋到，
+    // 底下的背景色透出來就變成一圈白色接縫。
+    // 解法：出血範圍往「內」多蓋 OVERLAP_PX，蓋掉這圈反鋸齒；
+    // 取樣位置則再往內縮一點，確保拿到的是完全不透明、乾淨的原圖顏色。
+    const OVERLAP_PX = 2;
+    const sampleR = Math.max(innerR - OVERLAP_PX - 1, 0);
+    const paintStartR = innerR - OVERLAP_PX;
+
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const px = (x + left) - cx;
+        const py = (y + top) - cy;
+        const dist = Math.sqrt(px * px + py * py);
+        if (dist > paintStartR && dist <= outerR) {
+          const angle = Math.atan2(py, px);
+          let srcX = Math.round(cx + Math.cos(angle) * sampleR - left);
+          let srcY = Math.round(cy + Math.sin(angle) * sampleR - top);
+          srcX = Math.min(Math.max(srcX, 0), w - 1);
+          srcY = Math.min(Math.max(srcY, 0), h - 1);
+
+          const srcIdx = (srcY * w + srcX) * 4;
+          const dstIdx = (y * w + x) * 4;
+          data[dstIdx] = data[srcIdx];
+          data[dstIdx + 1] = data[srcIdx + 1];
+          data[dstIdx + 2] = data[srcIdx + 2];
+          data[dstIdx + 3] = 255;
+        }
       }
-      updateSvgColorsAndDraw();
-    });
-
-    const scaleInput = document.getElementById('scaleInput');
-    const scaleNum = document.getElementById('scaleNum');
-    scaleInput.addEventListener('input', (e) => { scaleNum.value = e.target.value; userScaleMultiplier = parseFloat(e.target.value) / 100; draw(); });
-    scaleNum.addEventListener('input', (e) => { let val = parseFloat(e.target.value) || 100; scaleInput.value = val; userScaleMultiplier = val / 100; draw(); });
-
-    const rotateInput = document.getElementById('rotateInput');
-    const rotateNum = document.getElementById('rotateNum');
-    rotateInput.addEventListener('input', (e) => { rotateNum.value = e.target.value; imgState.angle = parseInt(e.target.value) || 0; draw(); });
-    rotateNum.addEventListener('input', (e) => { let val = parseInt(e.target.value) || 0; rotateInput.value = val; imgState.angle = val; draw(); });
-
-    document.getElementById('redColor').addEventListener('input', updateSvgColorsAndDraw);
-    document.getElementById('blackColor').addEventListener('input', updateSvgColorsAndDraw);
-    document.getElementById('whiteColor').addEventListener('input', updateSvgColorsAndDraw);
-
-    function updateSvgColorsAndDraw() {
-      if (svgDom) {
-        const cRed = document.getElementById('redColor').value;
-        const cBlack = document.getElementById('blackColor').value;
-        const cWhite = document.getElementById('whiteColor').value;
-
-        const redEl = svgDom.querySelector('#red-layer');
-        const blackEl = svgDom.querySelector('#black-layer');
-        const whiteEl = svgDom.querySelector('#white-layer');
-
-        if (redEl) redEl.setAttribute('fill', cRed);
-        if (blackEl) blackEl.setAttribute('fill', cBlack);
-        if (whiteEl) { whiteEl.setAttribute('fill', cWhite); whiteEl.setAttribute('stroke', cWhite); }
-
-        const svgString = new XMLSerializer().serializeToString(svgDom);
-        const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-        const url = URL.createObjectURL(svgBlob);
-
-        templateSvgImg.onload = () => { draw(); URL.revokeObjectURL(url); };
-        templateSvgImg.src = url;
-      } else { draw(); }
     }
 
-    function drawSingleSticker(targetCtx, cx, cy, diameter) {
-      const s = diameter / 360;
-      const hideFrame = document.getElementById('hideFrameCheck').checked;
-      const autoBleed = document.getElementById('autoBleedCheck').checked;
+    ctx.putImageData(imgData, left, top);
+  }
 
-      const innerR = hideFrame ? (180 * s) : (138 * s);
+  function drawSingleSticker(targetCtx, cx, cy, diameter) {
+    const s = diameter / 360;
+    const hideFrame = document.getElementById('hideFrameCheck').checked;
 
-      if (userImg) {
-        targetCtx.save();
-        
-        if (hideFrame && autoBleed) {
-          const bleedR = innerR * (18 / 16);
-          targetCtx.beginPath();
-          targetCtx.arc(cx, cy, bleedR, 0, Math.PI * 2);
-          targetCtx.clip();
+    // 全圖模式：一律以「16mm 實際裁切線」為基準圓，不是印刷邊界(18mm)，
+    // 避免把裁切線以外的內容也當成有效可視範圍
+    const innerR = hideFrame ? (cutRadiusPx() * s) : (FRAME_INNER_RADIUS_PX * s);
+
+    if (userImg) {
+      targetCtx.save();
+      targetCtx.beginPath();
+      targetCtx.arc(cx, cy, innerR, 0, Math.PI * 2);
+      targetCtx.clip();
+
+      const offsetX = (imgState.x - 180) * s;
+      const offsetY = (imgState.y - 180) * s;
+
+      targetCtx.translate(cx + offsetX, cy + offsetY);
+      targetCtx.rotate((imgState.angle * Math.PI) / 180);
+
+      const finalScale = baseFitScale * userScaleMultiplier;
+      const w = userImg.width * finalScale * s;
+      const h = userImg.height * finalScale * s;
+      targetCtx.drawImage(userImg, -w / 2, -h / 2, w, h);
+      targetCtx.restore();
+
+      if (hideFrame) {
+        // 全圖模式一律自動出血（不再需要勾選）：
+        // 出血不是把圖片放大（那樣會讓 16mm 以內的內容跟著跑掉／超出裁切線），
+        // 而是把 16mm 裁切線邊緣的像素顏色，以放射狀方式往外「複製延伸」1mm，
+        // 產生一圈不影響原圖內容、單純填補裁切誤差用的邊緣色出血。
+        const bleedR = innerR + BLEED_MM * pxPerMMSingle() * s;
+        applyRadialEdgeBleed(targetCtx, cx, cy, innerR, bleedR);
+      }
+    } else {
+      targetCtx.fillStyle = "#A0A0A0";
+      targetCtx.beginPath();
+      targetCtx.arc(cx, cy, innerR, 0, Math.PI * 2);
+      targetCtx.fill();
+    }
+
+    if (!hideFrame && templateSvgImg.complete && templateSvgImg.naturalWidth !== 0) {
+      // 依外框 SVG 的「原始尺寸比例」置中繪製（contain-fit，不強制拉伸變形）
+      const boxSize = diameter;
+      const fitScale = Math.min(boxSize / svgNaturalSize.w, boxSize / svgNaturalSize.h);
+      const drawW = svgNaturalSize.w * fitScale;
+      const drawH = svgNaturalSize.h * fitScale;
+      targetCtx.drawImage(templateSvgImg, cx - drawW / 2, cy - drawH / 2, drawW, drawH);
+    }
+  }
+
+  function drawSheetLayout(targetCtx, sheetWidth, sheetHeight) {
+    targetCtx.clearRect(0, 0, sheetWidth, sheetHeight);
+    targetCtx.fillStyle = "#FFFFFF";
+    targetCtx.fillRect(0, 0, sheetWidth, sheetHeight);
+
+    const rows = SHEET_ROWS;
+    const cols = SHEET_COLS;
+
+    // 以實際 mm 換算 px（傳入的 sheetWidth/sheetHeight 對應 4x6 吋，
+    // 不論是預覽畫布或匯出畫布，換算比例皆一致）
+    // 整張畫布 = ibon 實際印出的影像範圍。因檔案比例(1.5)高於紙張(1.48)，
+    // 是「高度」先碰到可列印邊界，故以高度換算 mm，寬度自然依比例對應。
+    const pxPerMM = sheetHeight / PRINT_AREA_HEIGHT_MM;
+
+    const stickerDiameter = STICKER_PRINTED_DIAMETER_MM * pxPerMM;  // 印出來的實際直徑
+    const insetPx = CUT_LINE_INSET_MM * pxPerMM;                    // 切刀線內縮 1mm（對齊16mm）
+    const rowGapPx = ROW_GAP_MM * pxPerMM;                          // 排與排之間的額外間距
+
+    const stepX = stickerDiameter;
+    const stepY = stickerDiameter + rowGapPx;
+
+    // 剩餘空間平均分配為上下左右邊界。縱向總高需計入 (rows-1) 段間距。
+    const totalHeight = rows * stickerDiameter + (rows - 1) * rowGapPx;
+    const marginX = (sheetWidth - cols * stickerDiameter) / 2;
+    const marginY = (sheetHeight - totalHeight) / 2;
+
+    // 先繪製每張貼紙圖案
+    for (let r = 0; r < rows; r++) {
+      const rowCanvas = savedRowCanvases[r];
+      for (let c = 0; c < cols; c++) {
+        const cx = marginX + c * stepX + stickerDiameter / 2;
+        const cy = marginY + r * stepY + stickerDiameter / 2;
+
+        if (rowCanvas) {
+          targetCtx.drawImage(rowCanvas, cx - stickerDiameter / 2, cy - stickerDiameter / 2, stickerDiameter, stickerDiameter);
         } else {
+          targetCtx.fillStyle = "#E0E0E0";
           targetCtx.beginPath();
-          targetCtx.arc(cx, cy, innerR, 0, Math.PI * 2);
-          targetCtx.clip();
-        }
-
-        const offsetX = (imgState.x - 180) * s;
-        const offsetY = (imgState.y - 180) * s;
-
-        targetCtx.translate(cx + offsetX, cy + offsetY);
-        targetCtx.rotate((imgState.angle * Math.PI) / 180);
-
-        const finalScale = baseFitScale * userScaleMultiplier;
-        const w = userImg.width * finalScale * s;
-        const h = userImg.height * finalScale * s;
-        targetCtx.drawImage(userImg, -w / 2, -h / 2, w, h);
-        targetCtx.restore();
-      } else {
-        targetCtx.fillStyle = "#A0A0A0";
-        targetCtx.beginPath();
-        targetCtx.arc(cx, cy, innerR, 0, Math.PI * 2);
-        targetCtx.fill();
-      }
-
-      if (!hideFrame && templateSvgImg.complete && templateSvgImg.naturalWidth !== 0) {
-        targetCtx.drawImage(templateSvgImg, cx - diameter / 2, cy - diameter / 2, diameter, diameter);
-      }
-    }
-
-    function drawSheetLayout(targetCtx, sheetWidth, sheetHeight) {
-      targetCtx.clearRect(0, 0, sheetWidth, sheetHeight);
-      targetCtx.fillStyle = "#FFFFFF";
-      targetCtx.fillRect(0, 0, sheetWidth, sheetHeight);
-
-      const rows = 7;
-      const cols = 5;
-
-      const marginX = sheetWidth * 0.02;
-      const marginY = sheetHeight * 0.02;
-      const stickerDiameter = (sheetWidth - marginX * 2) / cols;
-
-      const stepX = stickerDiameter;
-      const stepY = (sheetHeight - marginY * 2) / rows;
-      const lineLen = stickerDiameter * 0.25;
-
-      for (let r = 0; r < rows; r++) {
-        const rowCanvas = savedRowCanvases[r];
-        for (let c = 0; c < cols; c++) {
-          const cx = marginX + c * stepX + stickerDiameter / 2;
-          const cy = marginY + r * stepY + stickerDiameter / 2;
-
-          if (rowCanvas) {
-            targetCtx.drawImage(rowCanvas, cx - stickerDiameter / 2, cy - stickerDiameter / 2, stickerDiameter, stickerDiameter);
-          } else {
-            targetCtx.fillStyle = "#E0E0E0";
-            targetCtx.beginPath();
-            targetCtx.arc(cx, cy, stickerDiameter * 0.38, 0, Math.PI * 2);
-            targetCtx.fill();
-          }
-
-          // 繪製左上角對位直角黑線
-          const leftX = cx - stickerDiameter / 2;
-          const topY = cy - stickerDiameter / 2;
-
-          targetCtx.save();
-          targetCtx.strokeStyle = "#000000";
-          targetCtx.lineWidth = Math.max(1, sheetWidth * 0.0015);
-          
-          targetCtx.beginPath();
-          targetCtx.moveTo(leftX - lineLen * 0.2, topY);
-          targetCtx.lineTo(leftX + lineLen, topY);
-          targetCtx.moveTo(leftX, topY - lineLen * 0.2);
-          targetCtx.lineTo(leftX, topY + lineLen);
-          targetCtx.stroke();
-          
-          targetCtx.restore();
+          targetCtx.arc(cx, cy, stickerDiameter * 0.38, 0, Math.PI * 2);
+          targetCtx.fill();
         }
       }
     }
 
-    function draw() {
-      if (currentMode === 'single') {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawSingleSticker(ctx, 180, 180, 360);
-      } else {
-        drawSheetLayout(ctx, canvas.width, canvas.height);
-      }
+    // 再疊上滿版切刀對位格線：橫線貫穿整張紙寬度、直線貫穿整張紙高度，
+    // 對齊在每排/每欄往內 1mm（16mm）的裁切位置
+    if (!document.getElementById('showCutLineCheck').checked) return;
+
+    targetCtx.save();
+    targetCtx.strokeStyle = cutLineColorValue;
+    // 線寬以「預覽畫布(400px寬)」為基準，需依實際畫布寬度等比放大，
+    // 確保預覽看到的粗細與匯出的 1200px 檔案一致
+    targetCtx.lineWidth = Math.max(0.5, CUT_LINE_WIDTH_PX * (sheetWidth / 400));
+
+    targetCtx.beginPath();
+    for (let r = 0; r <= rows; r++) {
+      // 前 rows 條對齊各排圓形頂端往內 1mm；最後一條為收尾線，
+      // 需貼齊「最後一排圓形的底部」，否則會被排間距推到空白處
+      const y = (r < rows)
+        ? marginY + r * stepY + insetPx
+        : marginY + (rows - 1) * stepY + stickerDiameter + insetPx;
+      targetCtx.moveTo(0, y);
+      targetCtx.lineTo(sheetWidth, y);
+    }
+    for (let c = 0; c <= cols; c++) {
+      const x = marginX + c * stepX + insetPx;
+      targetCtx.moveTo(x, 0);
+      targetCtx.lineTo(x, sheetHeight);
+    }
+    targetCtx.stroke();
+    targetCtx.restore();
+  }
+
+  function draw() {
+    if (currentMode === 'single') {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawSingleSticker(ctx, 180, 180, 360);
+    } else {
+      drawSheetLayout(ctx, canvas.width, canvas.height);
+    }
+  }
+
+  function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    // touchend 時 e.touches 可能為空清單，需退回 changedTouches
+    const touch = (e.touches && e.touches.length) ? e.touches[0]
+                : (e.changedTouches && e.changedTouches.length) ? e.changedTouches[0]
+                : null;
+    const clientX = touch ? touch.clientX : e.clientX;
+    const clientY = touch ? touch.clientY : e.clientY;
+    // canvas 內部解析度（360）與 CSS 顯示寬度在手機上不同（會被 max-width:100% 縮小），
+    // 必須換算回 canvas 內部座標，否則拖曳時圖片會跑得比手指快
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+  }
+
+  function getPinchDistance(touches) {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  function startDrag(e) {
+    if (!userImg || currentMode !== 'single') return;
+
+    if (e.touches && e.touches.length === 2) {
+      isDragging = false;
+      initialPinchDist = getPinchDistance(e.touches);
+      initialScaleMultiplier = userScaleMultiplier;
+      return;
     }
 
-    function getPos(e) {
-      const rect = canvas.getBoundingClientRect();
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      return { x: clientX - rect.left, y: clientY - rect.top };
+    isDragging = true;
+    const pos = getPos(e);
+    startX = pos.x - imgState.x;
+    startY = pos.y - imgState.y;
+  }
+
+  function moveDrag(e) {
+    if (!userImg || currentMode !== 'single') return;
+
+    if (e.touches && e.touches.length === 2 && initialPinchDist) {
+      e.preventDefault();
+      const currentDist = getPinchDistance(e.touches);
+      const scaleFactor = currentDist / initialPinchDist;
+      let newScale = initialScaleMultiplier * scaleFactor;
+
+      newScale = Math.max(0.1, Math.min(3.0, newScale));
+      userScaleMultiplier = newScale;
+
+      syncScaleUI();
+      draw();
+      return;
     }
 
-    function getPinchDistance(touches) {
-      const dx = touches[0].clientX - touches[1].clientX;
-      const dy = touches[0].clientY - touches[1].clientY;
-      return Math.sqrt(dx * dx + dy * dy);
+    if (isDragging) {
+      if (e.touches) e.preventDefault();
+      const pos = getPos(e);
+      imgState.x = pos.x - startX;
+      imgState.y = pos.y - startY;
+      syncPositionUI();
+      draw();
     }
+  }
 
-    function startDrag(e) {
-      if (!userImg || currentMode !== 'single') return;
-      
-      if (e.touches && e.touches.length === 2) {
-        isDragging = false;
-        initialPinchDist = getPinchDistance(e.touches);
-        initialScaleMultiplier = userScaleMultiplier;
-        return;
-      }
-
+  function stopDrag(e) {
+    // 雙指縮放後若只放開一指、另一指還按著，
+    // 應無縫接回單指拖曳，而不是卡住直到全部放開
+    if (e && e.touches && e.touches.length === 1 && userImg && currentMode === 'single') {
+      initialPinchDist = null;
       isDragging = true;
       const pos = getPos(e);
       startX = pos.x - imgState.x;
       startY = pos.y - imgState.y;
+      return;
     }
+    isDragging = false;
+    initialPinchDist = null;
+  }
 
-    function moveDrag(e) {
-      if (!userImg || currentMode !== 'single') return;
+  canvas.addEventListener('mousedown', startDrag);
+  canvas.addEventListener('mousemove', moveDrag);
+  canvas.addEventListener('mouseup', stopDrag);
+  canvas.addEventListener('mouseleave', stopDrag);
 
-      if (e.touches && e.touches.length === 2 && initialPinchDist) {
-        e.preventDefault();
-        const currentDist = getPinchDistance(e.touches);
-        const scaleFactor = currentDist / initialPinchDist;
-        let newScale = initialScaleMultiplier * scaleFactor;
+  canvas.addEventListener('touchstart', startDrag, { passive: false });
+  canvas.addEventListener('touchmove', moveDrag, { passive: false });
+  canvas.addEventListener('touchend', stopDrag);
 
-        newScale = Math.max(0.1, Math.min(3.0, newScale));
-        userScaleMultiplier = newScale;
+  document.getElementById('downloadSheetBtn').addEventListener('click', () => {
+    const outCanvas = document.createElement('canvas');
+    // 4x6 相片標準尺寸（300dpi）：4in x 6in = 1200 x 1800 px
+    outCanvas.width = 1200;
+    outCanvas.height = 1800;
+    const outCtx = outCanvas.getContext('2d');
 
-        syncScaleUI();
-        draw();
+    drawSheetLayout(outCtx, 1200, 1800);
+
+    // 用 Blob 而非 toDataURL：1200x1800 的 PNG 轉成 base64 字串可達數 MB，
+    // 手機瀏覽器容易因字串過長而失敗或當掉
+    outCanvas.toBlob((blob) => {
+      if (!blob) {
+        alert('產生列印檔失敗，請再試一次。');
         return;
       }
+      const url = URL.createObjectURL(blob);
 
-      if (isDragging) {
-        if (e.touches) e.preventDefault();
-        const pos = getPos(e);
-        imgState.x = pos.x - startX;
-        imgState.y = pos.y - startY;
-        syncPositionUI();
-        draw();
+      // iOS Safari 對 <a download> 支援不完整，常常直接開新分頁而非下載
+      const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
+                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+      if (isIOS) {
+        const win = window.open(url, '_blank');
+        if (!win) {
+          alert('請允許彈出視窗，或改用電腦下載。');
+        } else {
+          alert('圖片已開啟於新分頁，請「長按圖片 → 加入照片」即可儲存。');
+        }
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      } else {
+        const link = document.createElement('a');
+        link.download = 'CX_Stickers_4x6_PrintSheet.png';
+        link.href = url;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
       }
-    }
+    }, 'image/png');
+  });
 
-    function stopDrag() {
-      isDragging = false;
-      initialPinchDist = null;
-    }
-
-    canvas.addEventListener('mousedown', startDrag);
-    canvas.addEventListener('mousemove', moveDrag);
-    canvas.addEventListener('mouseup', stopDrag);
-    canvas.addEventListener('mouseleave', stopDrag);
-
-    canvas.addEventListener('touchstart', startDrag, { passive: false });
-    canvas.addEventListener('touchmove', moveDrag, { passive: false });
-    canvas.addEventListener('touchend', stopDrag);
-
-    document.getElementById('downloadSheetBtn').addEventListener('click', () => {
-      const outCanvas = document.createElement('canvas');
-      outCanvas.width = 1200;
-      outCanvas.height = 1776;
-      const outCtx = outCanvas.getContext('2d');
-      
-      drawSheetLayout(outCtx, 1200, 1776);
-
-      const link = document.createElement('a');
-      link.download = 'CX_Stickers_4x6_PrintSheet.png';
-      link.href = outCanvas.toDataURL('image/png');
-      link.click();
-    });
-
-    draw();
-  </script>
+  draw();
+</script>
 </body>
 </html>
