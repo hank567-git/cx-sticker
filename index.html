@@ -261,39 +261,29 @@
 
     <div id="singlePanel">
       <div class="control-group" id="frameTypeSection" style="flex-direction:row; align-items:center; gap:8px; flex-wrap:wrap;">
-        <label style="flex:none;">1. 外框</label>
-        <div class="align-btn-group" style="flex:1; margin:0;">
+        <label style="flex:none;">1. 樣式</label>
+        <div class="align-btn-group" style="flex:1; margin:0; grid-template-columns:repeat(3,1fr);">
           <button id="frameRightBtn" class="btn-align">右迴旋</button>
           <button id="frameLeftBtn" class="btn-align">左迴旋</button>
+          <button id="frameNoneBtn" class="btn-align">全圖模式</button>
         </div>
+        <!-- 保留為隱藏欄位：全圖模式狀態由此驅動，多處繪製邏輯讀取它 -->
+        <input type="checkbox" id="hideFrameCheck" style="display:none;">
       </div>
 
       <div class="control-group" id="colorSection" style="flex-direction:row; align-items:center; gap:8px; flex-wrap:wrap;">
         <label style="flex:none;">2. 外框調色</label>
         <div class="color-pickers" style="flex:1;">
           <div class="color-item">
-            <span style="flex:none;">紅</span>
-            <input type="color" id="redColor" value="#FF0000">
+            <input type="color" id="redColor" value="#FF0000" title="紅色區">
           </div>
           <div class="color-item">
-            <span style="flex:none;">黑</span>
-            <input type="color" id="blackColor" value="#000000">
+            <input type="color" id="blackColor" value="#000000" title="黑色區">
           </div>
           <div class="color-item">
-            <span style="flex:none;">白</span>
-            <input type="color" id="whiteColor" value="#FFFFFF">
+            <input type="color" id="whiteColor" value="#FFFFFF" title="白色區">
           </div>
         </div>
-      </div>
-
-      <div class="control-group" style="flex-direction:row; align-items:center; gap:10px; flex-wrap:wrap;">
-        <label class="checkbox-label" style="margin-top:0;">
-          <input type="checkbox" id="hideFrameCheck">
-          不要外框（全圖模式）
-        </label>
-        <span class="tip" style="color:#007bff;">
-          全圖模式會自動延伸 1mm 出血
-        </span>
       </div>
 
       <div class="control-group" style="flex-direction:row; align-items:center; gap:8px; flex-wrap:wrap;">
@@ -978,26 +968,42 @@
     applyTheme(!document.body.classList.contains('dark'));
   });
 
-  // ---- 外框類型切換按鈕 ----
+  // ---- 樣式切換：右迴旋 / 左迴旋 / 全圖模式（三選一）----
+  // 全圖模式的狀態存在隱藏的 hideFrameCheck，因為繪製、匯出、彩蛋等
+  // 多處邏輯都讀取它；按鈕只是它的外觀化操作介面。
   const frameBtns = {
     right: document.getElementById('frameRightBtn'),
-    left: document.getElementById('frameLeftBtn')
+    left: document.getElementById('frameLeftBtn'),
+    none: document.getElementById('frameNoneBtn')
   };
-  function selectFrame(key) {
-    loadFrame(key);
+  const hideFrameCheckEl = document.getElementById('hideFrameCheck');
+
+  function syncFrameButtons() {
+    const active = hideFrameCheckEl.checked ? 'none' : currentFrameKey;
     Object.entries(frameBtns).forEach(([k, btn]) => {
-      // 選中者加深底色並加外框，避免不知道目前是哪一種。
-      // 用 inset box-shadow 而非 outline：outline 會往外溢出、壓到下一行元素
-      btn.style.background = (k === key) ? '#0d6efd' : '#17a2b8';
-      btn.style.boxShadow = (k === key) ? 'inset 0 0 0 3px #b6d4fe' : 'none';
+      // 用 inset box-shadow 而非 outline：outline 會往外溢出、壓到相鄰元素
+      btn.style.background = (k === active) ? '#0d6efd' : '#17a2b8';
+      btn.style.boxShadow = (k === active) ? 'inset 0 0 0 3px #b6d4fe' : 'none';
     });
-    // 不重算圖片縮放：兩種迴旋的內圈開孔相同，
-    // 重置會把使用者辛苦調好的位置與縮放歸零。
+  }
+
+  function selectFrame(key) {
+    const wantHide = (key === 'none');
+    if (hideFrameCheckEl.checked !== wantHide) {
+      hideFrameCheckEl.checked = wantHide;
+      // 觸發 change 讓調色區淡化等連動效果生效
+      hideFrameCheckEl.dispatchEvent(new Event('change'));
+    }
+    if (!wantHide) loadFrame(key);
+    syncFrameButtons();
     draw();
   }
+
   Object.keys(frameBtns).forEach(k => {
     frameBtns[k].addEventListener('click', () => selectFrame(k));
   });
+  // 彩蛋等程式碼會直接改動 checkbox，按鈕狀態需跟著同步
+  hideFrameCheckEl.addEventListener('change', syncFrameButtons);
   selectFrame('right');
 
   document.getElementById('imageInput').addEventListener('change', (e) => {
