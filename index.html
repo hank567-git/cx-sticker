@@ -1598,18 +1598,36 @@
   // 用 Blob 而非 toDataURL：大尺寸 PNG 轉 base64 字串可達數 MB，
   // 手機瀏覽器容易因字串過長而失敗或當掉。
   function downloadCanvas(sourceCanvas, filename, mime = 'image/png', quality) {
-    sourceCanvas.toBlob((blob) => {
+    sourceCanvas.toBlob(async (blob) => {
       if (!blob) {
         alert('產生圖檔失敗，請再試一次。');
         return;
       }
-      const url = URL.createObjectURL(blob);
 
-      // iOS Safari 對 <a download> 支援不完整，常常直接開新分頁而非下載
       const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
                     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
+      // iOS：優先用 Web Share API 叫出系統分享面板，
+      // 裡面有「儲存影像」可以一鍵直接存進相簿——不像開新分頁那樣
+      // 需要使用者自己長按、且會被彈出視窗封鎖擋下。
+      if (isIOS && navigator.share && navigator.canShare) {
+        try {
+          const file = new File([blob], filename, { type: mime });
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file] });
+            return;   // 使用者已透過分享面板存檔，流程結束
+          }
+        } catch (err) {
+          // AbortError = 使用者自己按了取消，不是錯誤，不需要再往下走備援流程
+          if (err && err.name === 'AbortError') return;
+          // 其他錯誤（例如系統不支援檔案分享）才 fall through 到下面的備援方式
+        }
+      }
+
+      const url = URL.createObjectURL(blob);
+
       if (isIOS) {
+        // 走到這裡代表分享面板無法使用，退回開新分頁的舊方案
         const win = window.open(url, '_blank');
         if (!win) {
           alert('請允許彈出視窗，或改用電腦下載。');
