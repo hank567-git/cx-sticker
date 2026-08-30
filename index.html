@@ -1756,9 +1756,9 @@
   // 尺寸依畫布高度換算，單張(1200)與比較圖(3000x1000)都能維持相同視覺比例。
   const PROOF_NOTICE_TEXT = '※ 此為參考圖，正式成品並不會有浮水印';
   function drawProofNotice(ctx, w, h) {
-    const fontSize = Math.round(h * 0.028);
-    const padX = h * 0.022;
-    const padY = h * 0.014;
+    const fontSize = Math.round(h * 0.040);
+    const padX = h * 0.026;
+    const padY = h * 0.016;
     const margin = h * 0.025;
 
     ctx.save();
@@ -1840,9 +1840,11 @@
     try {
       const CELL = 1000;
       const STICKER_PX = CELL * 0.74;
+      // 底部額外加高，讓右下角警語不會壓到「無外框」等款式標籤
+      const NOTICE_BAND = CELL * 0.12;
       const out = document.createElement('canvas');
       out.width = CELL * 3;
-      out.height = CELL;
+      out.height = CELL + NOTICE_BAND;
       const octx = out.getContext('2d', { willReadFrequently: true });
       octx.fillStyle = '#FFFFFF';
       octx.fillRect(0, 0, out.width, out.height);
@@ -1905,12 +1907,14 @@
   document.getElementById('downloadProofBtn').addEventListener('click', () => {
     const SIZE = 1200;                 // 輸出邊長
     const STICKER_PX = SIZE * 0.72;    // 貼紙佔比，四周留白便於檢視
+    // 底部額外加高，讓右下角警語不會壓到貼紙圖案
+    const NOTICE_BAND = SIZE * 0.1;
     const cx = SIZE / 2;
     const cy = SIZE / 2;
 
     const out = document.createElement('canvas');
     out.width = SIZE;
-    out.height = SIZE;
+    out.height = SIZE + NOTICE_BAND;
     const octx = out.getContext('2d', { willReadFrequently: true });
 
     octx.fillStyle = '#FFFFFF';
@@ -1923,7 +1927,7 @@
     drawCutCircleOverlay(octx, cx, cy, STICKER_PX, proofLineColorValue, lineW);
 
     if (document.getElementById('watermarkCheck').checked) {
-      drawWatermark(octx, SIZE, SIZE);
+      drawWatermark(octx, out.width, out.height);
     }
     downloadCanvas(out, 'CX_Sticker_Proof.jpg', 'image/jpeg', 0.92);
   });
