@@ -51,17 +51,82 @@
   /* ---- 手機版調整 ---- */
   @media (max-width: 700px) {
     body { padding: 8px; }
-    .container { padding: 12px; gap: 12px; }
-    /* 預覽區移到控制項上方，方便邊看邊調；堆疊後 sticky 會造成跳動，改為靜態 */
-    .preview-area { order: -1; position: static; width: 100%; padding: 10px; }
+    /* ===== 方案 A：預覽區釘在畫面頂端 =====
+       調整下方拉桿時仍能看到貼紙效果。
+       關鍵：在「換行」的 flex 容器裡，sticky 元素只能在自己那一行內
+       吸附（等於沒有作用）。改成單列的縱向 flex，讓容器本身很高、
+       預覽是第一個項目，sticky 才會正常運作。 */
+    .container {
+      padding: 12px;
+      gap: 12px;
+      flex-direction: column;
+      flex-wrap: nowrap;
+      align-items: stretch;
+    }
+    .preview-area {
+      order: -1;
+      width: 100%;
+      padding: 8px;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      /* 捲動時要蓋住下方內容，不能透出 */
+      background: #f8f9fa;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+      /* 限制高度，避免吃掉太多操作空間 */
+      max-height: 40vh;
+    }
+    .preview-area canvas {
+      max-height: calc(40vh - 20px);
+      max-width: 100%;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+    }
     .controls { width: 100%; }
     /* 加大觸控目標，避免手指難按 */
     button { padding: 12px; font-size: 14px; }
     .tab-btn { padding: 12px 6px; font-size: 13px; }
     input[type="range"] { height: 28px; }
-    .number-input-wrap input[type="number"] { font-size: 14px; padding: 6px 4px; width: 58px; }
-    .send-box select { font-size: 14px; padding: 10px; }
     .color-item input[type="color"] { height: 44px; }
+
+    /* iOS Safari 在 font-size < 16px 的輸入框獲得焦點時會自動放大整頁，
+       且不會自動縮回，體感像是版面壞掉。所有可輸入元素一律 >= 16px。
+       使用 !important 是因為這些元素帶有行內 style，優先權高於一般規則。 */
+    input[type="number"],
+    input[type="text"],
+    select {
+      font-size: 16px !important;
+    }
+    .number-input-wrap input[type="number"] {
+      padding: 8px 6px !important;
+      width: 68px !important;
+    }
+    .send-box select { padding: 10px; }
+
+    /* 裁切線顏色鈕在桌機是小尺寸行內樣式，手機上放大到易點擊的大小 */
+    #cutLineOptions button,
+    #proofBlackBtn, #proofOrangeBtn, #proofCyanBtn, #proofWhiteBtn {
+      padding: 11px 18px !important;
+      font-size: 14px !important;
+    }
+    #calApplyBtn { padding: 11px 18px !important; }
+    #clearImgBtn { padding: 10px 14px !important; font-size: 13px !important; }
+
+    /* ---- 微調區塊緊湊化：讓預覽能留在畫面內 ---- */
+    /* 維持 2 欄（改單欄會變成 4 列，反而更高），改為壓縮每格的內部間距 */
+    .quad-grid { gap: 6px; }
+    .quad-item { padding: 5px 6px; }
+    /* 標籤列與滑桿之間的間距（HTML 為行內樣式，需 important 覆蓋） */
+    .quad-item > div { margin-bottom: 2px !important; }
+    .quad-item input[type="range"] { height: 24px; }
+    /* 數字框維持 16px 字級避免 iOS 縮放，改以壓低內距來省高度 */
+    .quad-item .number-input-wrap input[type="number"] {
+      padding: 2px 6px !important;
+      width: 56px !important;
+    }
+    .align-btn-group { margin-bottom: 2px; }
+    .align-btn-group button { padding: 8px 4px !important; font-size: 13px !important; }
   }
 
   .quad-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 2px; }
@@ -105,8 +170,16 @@
     </div>
 
     <div id="singlePanel">
+      <div class="control-group" id="frameTypeSection">
+        <label>1. 外框類型：</label>
+        <div class="align-btn-group">
+          <button id="frameRightBtn" class="btn-align">右迴旋</button>
+          <button id="frameLeftBtn" class="btn-align">左迴旋</button>
+        </div>
+      </div>
+
       <div class="control-group" id="colorSection">
-        <label>1. 外框分區調色：</label>
+        <label>2. 外框分區調色：</label>
         <div class="color-pickers">
           <div class="color-item">
             <span>紅色區</span>
@@ -134,13 +207,15 @@
       </div>
 
       <div class="control-group">
-        <label>2. 上傳內圈圖片：</label>
-        <input type="file" id="imageInput" accept="image/*">
-        <button id="clearImgBtn" class="btn-danger">刪除內圈圖片</button>
+        <label>3. 上傳內圈圖片：</label>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input type="file" id="imageInput" accept="image/*" style="flex:1; min-width:0;">
+          <button id="clearImgBtn" class="btn-danger" style="width:auto; flex:none; padding:6px 10px; font-size:12px; margin:0;">刪除</button>
+        </div>
       </div>
 
       <div class="control-group">
-        <label>3. 圖片微調：</label>
+        <label>4. 圖片微調：</label>
         <div class="align-btn-group">
           <button id="alignHBtn" class="btn-align">左右置中</button>
           <button id="alignVBtn" class="btn-align">上下置中</button>
@@ -208,6 +283,25 @@
 
       <div id="sendToast" style="display:none; background:#d1e7dd; border:1px solid #a3cfbb; color:#0f5132; padding:8px 10px; border-radius:6px; font-size:12px; margin-top:6px;"></div>
 
+      <div class="control-group" style="margin-top:8px;">
+        <label class="checkbox-label" style="color:#495057; margin-top:0;">
+          <input type="checkbox" id="showPreviewCutCheck" checked>
+          預覽顯示裁切線
+        </label>
+        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-top:4px;">
+          <span class="tip">裁切線顏色</span>
+          <button id="proofBlackBtn" class="btn-secondary" style="width:auto; padding:7px 12px; margin:0; font-size:12px; background:#000000;">黑</button>
+          <button id="proofOrangeBtn" class="btn-secondary" style="width:auto; padding:7px 12px; margin:0; font-size:12px; background:#ff5722;">橘</button>
+          <button id="proofCyanBtn" class="btn-secondary" style="width:auto; padding:7px 12px; margin:0; font-size:12px; background:#00bcd4;">青</button>
+          <button id="proofWhiteBtn" class="btn-secondary" style="width:auto; padding:7px 12px; margin:0; font-size:12px; background:#ffffff; color:#333; border:1px solid #ccc;">白</button>
+        </div>
+      </div>
+
+      <button id="downloadProofBtn" class="btn-download" style="margin-top:8px;">下載單張打樣圖（含裁切線）</button>
+      <button id="downloadCompareBtn" class="btn-download" style="margin-top:6px; background:#6f42c1;">下載三款比較圖（左／右迴旋／無外框）</button>
+      <p class="tip">💡 給客戶確認用：高解析單張貼紙，虛線標示實際裁切位置。深色貼紙建議用白或青色線。<br>
+      比較圖會用同一張照片並排三種樣式，方便客戶挑選。</p>
+
       <button id="resetAllBtn" class="btn-reset">重置所有設定</button>
     </div>
 
@@ -215,9 +309,9 @@
       <div class="control-group">
         <label>圈直徑 — 印出來的實際大小（mm）：</label>
         <div style="display:flex; gap:8px; align-items:center;">
-          <input type="range" id="sheetDiaInput" min="8" max="18.6" step="0.1" value="18" style="flex:1;">
+          <input type="range" id="sheetDiaInput" min="16.6" max="18.6" step="0.1" value="18" style="flex:1;">
           <div class="number-input-wrap">
-            <input type="number" id="sheetDiaNum" min="8" max="18.6" step="0.1" value="18" style="width:60px;">
+            <input type="number" id="sheetDiaNum" min="16.6" max="18.6" step="0.1" value="18" style="width:60px;">
             <span class="unit">mm</span>
           </div>
         </div>
@@ -228,17 +322,18 @@
         <label>📏 實測校準（換店家／換機器時重做一次）</label>
         <p class="tip" style="margin:2px 0 6px 0;">
           目前依 7-11 ibon 規格設定（紙張 100×148mm，機台會等比縮放並留白邊）。<br>
-          若印出來尺寸不符，印一張用尺量最外圈直徑填入，即可自動修正。
+          印一張出來，用尺量任一項填入即可——程式會自動反推整張圖的縮放誤差並修正，
+          修正後所有尺寸會一起變準。
         </p>
         <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-          <span class="tip">目標</span>
+          <span class="tip">我量的是</span>
+          <select id="calWhat" style="width:auto; padding:6px 8px; font-size:12px; border-radius:6px; border:1px solid #ccc;">
+            <option value="sticker">貼紙外圈</option>
+            <option value="cut">裁切線內圈</option>
+          </select>
+          <span class="tip">量到</span>
           <div class="number-input-wrap">
-            <input type="number" id="calTarget" step="0.1" value="18" style="width:52px;">
-            <span class="unit">mm</span>
-          </div>
-          <span class="tip">／ 實際量到</span>
-          <div class="number-input-wrap">
-            <input type="number" id="calMeasured" step="0.1" placeholder="18.0" style="width:52px;">
+            <input type="number" id="calMeasured" step="0.1" placeholder="18.3" style="width:56px;">
             <span class="unit">mm</span>
           </div>
           <button id="calApplyBtn" class="btn-secondary" style="width:auto; padding:8px 12px; margin:0;">套用</button>
@@ -252,13 +347,18 @@
             <input type="checkbox" id="showCutLineCheck" checked>
             顯示裁切對位線
           </label>
-          <div id="cutLineOptions" style="display:flex; gap:6px; align-items:center;">
+          <div id="cutLineOptions" style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+            <select id="cutLineShape" style="width:auto; padding:6px 8px; font-size:12px; border-radius:6px; border:1px solid #ccc;">
+              <option value="circle">圓形 16.2mm</option>
+              <option value="grid">直線格線</option>
+            </select>
             <button id="cutLineBlackBtn" class="btn-secondary" style="width:auto; padding:7px 12px; margin:0; font-size:12px; background:#000000;">黑</button>
             <button id="cutLineOrangeBtn" class="btn-secondary" style="width:auto; padding:7px 12px; margin:0; font-size:12px; background:#ff5722;">橘</button>
             <button id="cutLineCyanBtn" class="btn-secondary" style="width:auto; padding:7px 12px; margin:0; font-size:12px; background:#00bcd4;">青</button>
+            <button id="cutLineWhiteBtn" class="btn-secondary" style="width:auto; padding:7px 12px; margin:0; font-size:12px; background:#ffffff; color:#333; border:1px solid #ccc;">白</button>
           </div>
         </div>
-        <p class="tip">💡 深色貼紙用淺色線比較看得清楚；不需要線時可直接取消勾選。</p>
+        <p class="tip">💡 圓形模式會在每張貼紙畫出 16.2mm 的裁切圓；深色貼紙用淺色線比較看得清楚。</p>
       </div>
 
       <div class="control-group">
@@ -293,40 +393,117 @@
   // 之後若你有正式授權的向量外框檔，直接把整段 FRAME_SVG_MARKUP
   // 換成正式內容（維持同樣的 id 命名）即可沿用，不需要改其他程式碼。
   // ============================================================
-  const FRAME_SVG_MARKUP = `<svg version="1.1" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
-  <g id="black-layer" fill="#000000">
-    <path d="M227.15,6.89 A195,195 0 1,1 117.59,376.73 L138.72,331.41 A145,145 0 1,0 220.19,56.41 Z"/>
+  const FRAME_SVG_RIGHT = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 51.02 51.02">
+  <g id="red-layer">
+    <path d="M24.66.01v7.66c-6.07.29-11.58,3.65-14.62,8.91-3.04,5.26-3.19,11.71-.41,17.11-2.21,1.28-4.42,2.55-6.63,3.83-4.15-7.77-3.99-17.14.41-24.77C7.82,5.13,15.85.31,24.66.01Z" fill="#e71e21"/>
   </g>
-  <g id="red-layer" fill="#FF0000">
-    <path d="M93.80,363.55 A195,195 0 0,1 183.00,5.74 L187.36,55.55 A145,145 0 0,0 121.03,321.61 Z"/>
+  <g id="black-layer">
+    <path d="M26.36.01c8.96.3,17.1,5.28,21.45,13.11,4.35,7.84,4.27,17.38-.21,25.14-4.48,7.76-12.71,12.6-21.67,12.75-8.96.15-17.34-4.41-22.08-12.02,1.72-.99,3.44-1.99,5.16-2.98,3.67,5.77,10.09,9.2,16.92,9.05,6.83-.15,13.1-3.85,16.51-9.77-.49-.28-.98-.57-1.47-.85-3.11,5.39-8.81,8.78-15.04,8.92-6.23.15-12.08-2.96-15.45-8.2.49-.28.98-.57,1.47-.85,3.06,4.71,8.35,7.5,13.97,7.35,5.62-.15,10.76-3.21,13.57-8.07,2.81-4.87,2.89-10.85.21-15.79-2.68-4.94-7.74-8.13-13.35-8.43V.01Z"/>
   </g>
-  <g id="white-layer" fill="#FFFFFF">
-    <path d="M117.59,376.73 A195,195 0 0,1 93.80,363.55 L121.03,321.61 A145,145 0 0,0 138.72,331.41 Z"/>
-    <path d="M183.00,5.74 A195,195 0 0,1 227.15,6.89 L220.19,56.41 A145,145 0 0,0 187.36,55.55 Z"/>
-    <path d="M284,345.49 A168,168 0 0,1 142.54,357.87" stroke="#FFFFFF" stroke-width="10" fill="none" stroke-linecap="round"/>
-    <g>
-      <line x1="200" y1="155" x2="200" y2="185" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" transform="rotate(20 200 200)"/>
-      <line x1="200" y1="155" x2="200" y2="185" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" transform="rotate(28 200 200)"/>
-      <line x1="200" y1="155" x2="200" y2="185" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" transform="rotate(36 200 200)"/>
-      <line x1="200" y1="155" x2="200" y2="185" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" transform="rotate(44 200 200)"/>
-      <line x1="200" y1="155" x2="200" y2="185" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" transform="rotate(52 200 200)"/>
-      <line x1="200" y1="155" x2="200" y2="185" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" transform="rotate(60 200 200)"/>
-      <line x1="200" y1="155" x2="200" y2="185" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" transform="rotate(68 200 200)"/>
-      <line x1="200" y1="155" x2="200" y2="185" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" transform="rotate(76 200 200)"/>
-    </g>
-    <g transform="rotate(97 200 200)">
-      <path d="M190,140 L210,140 L200,160 Z"/>
-      <path d="M190,163 L210,163 L200,183 Z"/>
-      <path d="M190,186 L210,186 L200,206 Z"/>
-    </g>
+  <g id="white-layer">
+    <polygon points="6.76 28.63 7.74 29.2 8.02 30.85 5.94 29.6 4.38 31.58 4.12 30.04 5 28.93 3.8 28.17 3.54 26.63 5.67 27.98 7.22 26.12 7.5 27.76 6.76 28.63" fill="#fff"/>
+    <path d="M4.56,20.05c-.04.2-.04.4,0,.6.03.19.1.37.2.53.11.17.26.32.44.42.1.06.2.1.31.13.11.03.22.05.33.05.21,0,.41-.04.6-.13.17-.08.32-.2.44-.35.13-.15.24-.33.31-.52.18-.63.35-1.26.53-1.89-.87-.24-1.74-.49-2.61-.73l-.53,1.89Z" fill="#fff"/>
+    <polygon points="8.32 17.54 8.74 16.69 6.84 14.38 6.51 15.05 6.87 15.5 6.24 16.78 5.67 16.76 5.34 17.43 8.32 17.54" fill="#fff"/>
+    <polygon points="8.77 12.87 10.45 14.05 10.87 13.46 8.64 11.89 7.11 14.05 7.66 14.44 8.77 12.87" fill="#fff"/>
+    <path d="M9.75,10.59c-.12.12-.22.28-.27.44-.04.12-.05.25-.03.37.03.14.1.27.2.37.11.1.25.18.4.2.14.02.28,0,.41-.06-.03.11-.03.23,0,.34.03.12.09.24.18.33.09.09.21.16.33.19.15.03.3.01.44-.04.08-.03.15-.08.22-.14.57-.54,1.14-1.09,1.7-1.64-.63-.66-1.27-1.32-1.9-1.98l-1.69,1.62Z" fill="#fff"/>
+    <path d="M19.35,4.7c-.17.04-.33.13-.46.25-.09.09-.17.19-.21.31-.05.13-.05.28,0,.42.04.15.13.28.25.37.11.09.25.14.39.15-.08.08-.14.18-.18.29-.04.12-.04.25,0,.38.03.13.1.24.19.33.11.1.25.16.4.18.09.01.17,0,.26,0,.76-.19,1.53-.37,2.29-.56-.22-.89-.44-1.78-.65-2.67-.76.19-1.52.37-2.27.56Z" fill="#fff"/>
+    <polygon points="13.53 8.59 13.6 10.72 14.19 10.31 14.14 8.83 15.5 9.39 16.09 8.98 14.12 8.18 13.58 7.41 12.99 7.83 13.53 8.59" fill="#fff"/>
+    <polygon points="6.52 25.39 6.78 22.48 4.03 22.24 3.78 25.15 4.46 25.21 4.65 23.02 5.07 23.05 4.91 24.94 5.53 24.99 5.69 23.11 6.09 23.14 5.9 25.34 6.52 25.39" fill="#fff"/>
+    <polygon points="16.18 8.97 18.84 7.75 17.68 5.24 15.02 6.47 15.31 7.09 17.31 6.17 17.49 6.55 15.78 7.35 16.04 7.91 17.75 7.12 17.92 7.48 15.92 8.4 16.18 8.97" fill="#fff"/>
+    <path d="M26.36,9.38V.01c-.57-.02-1.13-.02-1.7,0v7.66c-6.07.29-11.58,3.65-14.62,8.91-3.04,5.26-3.19,11.71-.41,17.11-2.21,1.28-4.42,2.55-6.63,3.83.27.5.55.99.85,1.47,1.72-.99,3.44-1.99,5.16-2.98,3.67,5.77,10.09,9.2,16.92,9.05,6.83-.15,13.1-3.85,16.51-9.77-.49-.28-.98-.57-1.47-.85-3.11,5.39-8.81,8.78-15.04,8.92-6.23.15-12.08-2.96-15.45-8.2.49-.28.98-.57,1.47-.85-3.31-5.1-3.48-11.62-.44-16.88,3.04-5.26,8.77-8.38,14.84-8.06Z" fill="#fff"/>
+    <path d="M44.96,17.92c.2-.08.42.09.38.31-.13.85-.26,1.71-.39,2.56-.03.22-.29.31-.46.18-.67-.54-1.35-1.08-2.02-1.62-.17-.14-.13-.41.07-.49.8-.31,1.61-.63,2.41-.94Z" fill="#fff"/>
+    <path d="M43.43,21.87c-.21.04-.3.3-.16.47.57.65,1.14,1.29,1.72,1.94.14.16.41.11.48-.1.27-.82.55-1.64.82-2.46.07-.21-.11-.41-.33-.37-.85.17-1.69.34-2.54.52Z" fill="#fff"/>
+    <path d="M43.79,24.98c-.22,0-.35.25-.23.43.45.74.91,1.47,1.36,2.21.11.19.39.18.49-.01.41-.76.82-1.52,1.23-2.28.1-.19-.04-.42-.26-.42-.86.03-1.73.05-2.59.07Z" fill="#fff"/>
+    <path d="M30.2,7.99c.15.04.31-.05.35-.2.2-.73.39-1.46.59-2.19.04-.15-.05-.31-.2-.35-.15-.04-.31.05-.35.2-.2.73-.39,1.46-.59,2.19-.04.15.05.31.2.35" fill="#fff"/>
+    <path d="M31.15,8.27c.15.05.31-.03.36-.18.24-.72.47-1.44.71-2.16.05-.15-.03-.31-.18-.36-.15-.05-.31.03-.36.18-.23.72-.47,1.44-.71,2.16-.05.15.03.31.18.36" fill="#fff"/>
+    <path d="M32.09,8.6c.15.06.31-.02.37-.16l.82-2.11c.06-.15-.02-.31-.16-.37-.15-.06-.31.02-.37.16-.27.7-.55,1.41-.82,2.11-.06.15.02.31.16.37" fill="#fff"/>
+    <path d="M33,8.99c.14.06.31,0,.38-.14.31-.69.62-1.38.94-2.07.06-.14,0-.31-.14-.38-.14-.06-.31,0-.38.14-.31.69-.62,1.38-.94,2.07-.06.14,0,.31.14.38" fill="#fff"/>
+    <path d="M33.9,9.42c.14.07.31.02.38-.12l1.05-2.01c.07-.14.02-.31-.12-.38-.14-.07-.31-.02-.38.12-.35.67-.7,1.34-1.05,2.01-.07.14-.02.31.12.38" fill="#fff"/>
+    <path d="M34.77,9.91c.13.08.31.04.39-.1.39-.65.77-1.3,1.16-1.95.08-.13.04-.31-.1-.39-.13-.08-.31-.04-.39.1-.39.65-.77,1.3-1.16,1.95-.08.13-.04.31.1.39" fill="#fff"/>
+    <path d="M35.61,10.44c.13.09.31.05.39-.08l1.26-1.88c.09-.13.05-.31-.08-.39-.13-.09-.31-.05-.39.08-.42.63-.84,1.26-1.26,1.88-.09.13-.05.31.08.39" fill="#fff"/>
+    <path d="M36.42,11.01c.13.09.3.07.4-.06.45-.6.91-1.21,1.36-1.81.09-.13.07-.3-.06-.4-.13-.09-.3-.07-.4.06-.45.6-.91,1.21-1.36,1.81-.09.13-.07.3.06.4" fill="#fff"/>
+    <path d="M37.19,11.63c.12.1.3.09.4-.03.49-.58.97-1.16,1.46-1.74.1-.12.09-.3-.03-.4-.12-.1-.3-.09-.4.03-.49.58-.97,1.16-1.46,1.73-.1.12-.09.3.03.4" fill="#fff"/>
+    <path d="M37.94,12.29c.11.11.29.1.4-.01.52-.55,1.04-1.1,1.55-1.65.11-.11.1-.29-.01-.4s-.29-.1-.4.01c-.52.55-1.04,1.1-1.55,1.65-.11.11-.1.29.01.4" fill="#fff"/>
+    <path d="M38.64,12.99c.11.11.29.12.4,0,.55-.52,1.09-1.04,1.64-1.57.11-.11.12-.29,0-.4s-.29-.12-.4,0c-.55.52-1.09,1.04-1.64,1.56-.11.11-.12.29,0,.4" fill="#fff"/>
+    <path d="M39.31,13.73c.1.12.28.13.4.03.57-.49,1.15-.98,1.72-1.47.12-.1.13-.28.03-.4-.1-.12-.28-.13-.4-.03-.57.49-1.15.98-1.72,1.47-.12.1-.13.28-.03.4" fill="#fff"/>
+    <path d="M39.93,14.5c.1.12.27.15.4.05.6-.46,1.2-.92,1.8-1.38.12-.1.15-.27.05-.4s-.27-.15-.4-.05c-.6.46-1.2.92-1.8,1.38-.12.1-.15.27-.05.4" fill="#fff"/>
+    <path d="M40.51,15.31c.09.13.26.16.39.08.62-.43,1.25-.85,1.88-1.28.13-.09.16-.26.07-.39s-.26-.16-.39-.07c-.62.43-1.25.85-1.88,1.28-.13.09-.16.26-.07.39" fill="#fff"/>
+    <path d="M41.05,16.14c.08.13.26.18.39.1.65-.39,1.29-.78,1.94-1.17.13-.08.18-.26.1-.39s-.26-.18-.39-.1c-.65.39-1.29.78-1.94,1.17-.13.08-.18.26-.1.39" fill="#fff"/>
+    <path d="M41.98,17.9c.07.14.23.2.38.14.69-.32,1.37-.63,2.06-.95.14-.07.2-.23.14-.38s-.23-.2-.38-.14c-.69.32-1.37.63-2.06.95-.14.07-.2.23-.14.38" fill="#fff"/>
+    <path d="M41.54,17.01c.07.14.24.19.38.12.67-.35,1.34-.71,2-1.06.14-.07.19-.24.12-.38s-.24-.19-.38-.12c-.67.35-1.34.71-2,1.06-.14.07-.19.24-.12.38" fill="#fff"/>
+  </g>
+  <g id="red-layer-2" data-name="red-layer">
+    <polygon points="6.32 28.7 7.48 29.38 7.64 30.29 5.87 29.23 4.55 30.9 4.42 30.11 5.42 28.86 4.06 28 3.93 27.21 5.73 28.35 7.04 26.77 7.2 27.68 6.32 28.7" fill="#e71e21"/>
+    <path d="M5.2,20.22c-.02.13,0,.26.05.38.05.12.14.23.25.3.06.04.13.07.21.09.07.02.15.03.22.03.13,0,.26-.05.37-.12.1-.07.18-.18.24-.3.11-.41.23-.82.34-1.22-.45-.13-.89-.25-1.34-.38-.11.41-.23.81-.34,1.22Z" fill="#e71e21"/>
+    <polygon points="6.9 16.8 7.98 16.84 7.29 16.01 6.9 16.8" fill="#e71e21"/>
+    <path d="M11.06,11.67s-.06.08-.07.13c0,.05,0,.09.02.14.02.04.06.08.1.1.05.02.11.02.16,0,.03-.01.06-.04.08-.06.35-.33.7-.67,1.04-1-.1-.1-.2-.2-.29-.31-.35.33-.7.67-1.04,1Z" fill="#e71e21"/>
+    <path d="M10.35,10.93s-.06.08-.07.13c0,.05,0,.09.02.14.02.04.06.08.1.1.05.02.11.02.16,0,.03-.01.06-.04.08-.06.35-.33.7-.67,1.04-1-.1-.1-.2-.2-.29-.31-.35.33-.7.67-1.04,1Z" fill="#e71e21"/>
+    <path d="M19.93,6.29s-.1.04-.13.07c-.03.03-.05.08-.05.13,0,.05,0,.1.04.14.03.05.08.08.14.08.03,0,.07,0,.1-.01.47-.11.94-.23,1.41-.34-.03-.14-.07-.28-.1-.41-.47.11-.94.23-1.41.34Z" fill="#e71e21"/>
+    <path d="M19.69,5.3s-.1.04-.13.07c-.03.03-.05.08-.05.13,0,.05,0,.1.04.14.03.05.08.08.14.08.03,0,.07,0,.1-.01.47-.11.94-.23,1.41-.34-.03-.14-.07-.28-.1-.41-.47.11-.94.23-1.41.34Z" fill="#e71e21"/>
+  </g>
+</svg>`;
+
+  // 左迴旋外框（與右迴旋為不同設計，非鏡像）
+  const FRAME_SVG_LEFT = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 51.02 51.02">
+  <g id="red-layer">
+    <path d="M26.36.01v7.66c6.07.29,11.58,3.65,14.62,8.91,3.04,5.26,3.19,11.71.41,17.11,2.21,1.28,4.42,2.55,6.63,3.83,4.15-7.77,3.99-17.14-.41-24.77C43.2,5.13,35.17.31,26.36.01Z" fill="#e71e21"/>
+  </g>
+  <g id="black-layer">
+    <path d="M24.66.01C15.7.31,7.56,5.29,3.21,13.13c-4.35,7.84-4.27,17.38.21,25.14,4.48,7.76,12.71,12.6,21.67,12.75s17.34-4.41,22.08-12.02c-1.72-.99-3.44-1.99-5.16-2.98-3.67,5.77-10.09,9.2-16.92,9.05-6.83-.15-13.1-3.85-16.51-9.77.49-.28.98-.57,1.47-.85,3.11,5.39,8.81,8.78,15.04,8.92,6.23.15,12.08-2.96,15.45-8.2-.49-.28-.98-.57-1.47-.85-3.06,4.71-8.35,7.5-13.97,7.35-5.62-.15-10.76-3.21-13.57-8.07-2.81-4.87-2.89-10.85-.21-15.79,2.68-4.94,7.74-8.13,13.35-8.43V.01Z"/>
+  </g>
+  <g id="white-layer">
+    <path d="M24.66,9.38V.01c.57-.02,1.13-.02,1.7,0v7.66c6.07.29,11.58,3.65,14.62,8.91,3.04,5.26,3.19,11.71.41,17.11,2.21,1.28,4.42,2.55,6.63,3.83-.27.5-.55.99-.85,1.47-1.72-.99-3.44-1.99-5.16-2.98-3.67,5.77-10.09,9.2-16.92,9.05-6.83-.15-13.1-3.85-16.51-9.77.49-.28.98-.57,1.47-.85,3.11,5.39,8.81,8.78,15.04,8.92,6.23.15,12.08-2.96,15.45-8.2-.49-.28-.98-.57-1.47-.85,3.31-5.1,3.48-11.62.44-16.88-3.04-5.26-8.77-8.38-14.84-8.06Z" fill="#fff"/>
+    <path d="M8.47,18.86c.2.08.24.35.07.49-.67.54-1.35,1.08-2.02,1.62-.17.14-.42.04-.46-.18-.13-.85-.26-1.71-.39-2.56-.03-.22.18-.39.38-.31.8.31,1.61.63,2.41.94Z" fill="#fff"/>
+    <path d="M7.59,21.87c.21.04.3.3.16.47-.57.65-1.14,1.29-1.72,1.94-.14.16-.41.11-.48-.1-.27-.82-.55-1.64-.82-2.46-.07-.21.11-.41.33-.37.85.17,1.69.34,2.54.52Z" fill="#fff"/>
+    <path d="M7.23,24.98c.22,0,.35.25.23.43-.45.74-.91,1.47-1.36,2.21-.11.19-.39.18-.49-.01l-1.23-2.28c-.1-.19.04-.42.26-.42.86.03,1.73.05,2.59.07Z" fill="#fff"/>
+    <path d="M20.82,7.99c-.15.04-.31-.05-.35-.2-.2-.73-.39-1.46-.59-2.19-.04-.15.05-.31.2-.35.15-.04.31.05.35.2.2.73.39,1.46.59,2.19.04.15-.05.31-.2.35" fill="#fff"/>
+    <path d="M19.87,8.27c-.15.05-.31-.03-.36-.18-.23-.72-.47-1.44-.71-2.16-.05-.15.03-.31.18-.36.15-.05.31.03.36.18.23.72.47,1.44.71,2.16.05.15-.03.31-.18.36" fill="#fff"/>
+    <path d="M18.94,8.6c-.15.06-.31-.02-.37-.16l-.82-2.11c-.06-.15.02-.31.16-.37.15-.06.31.02.37.16l.82,2.11c.06.15-.02.31-.16.37" fill="#fff"/>
+    <path d="M18.02,8.99c-.14.06-.31,0-.38-.14-.31-.69-.62-1.38-.94-2.07-.06-.14,0-.31.14-.38s.31,0,.38.14c.31.69.62,1.38.94,2.07.06.14,0,.31-.14.38" fill="#fff"/>
+    <path d="M17.13,9.42c-.14.07-.31.02-.38-.12l-1.05-2.01c-.07-.14-.02-.31.12-.38s.31-.02.38.12c.35.67.7,1.34,1.05,2.01.07.14.02.31-.12.38" fill="#fff"/>
+    <path d="M16.26,9.91c-.13.08-.31.04-.39-.1-.39-.65-.77-1.3-1.16-1.95-.08-.13-.04-.31.1-.39.13-.08.31-.04.39.1.39.65.77,1.3,1.16,1.95.08.13.04.31-.1.39" fill="#fff"/>
+    <path d="M15.42,10.44c-.13.09-.31.05-.39-.08-.42-.63-.84-1.26-1.26-1.88-.09-.13-.05-.31.08-.39s.31-.05.39.08l1.26,1.88c.09.13.05.31-.08.39" fill="#fff"/>
+    <path d="M14.61,11.01c-.13.09-.3.07-.4-.06-.45-.6-.91-1.21-1.36-1.81-.09-.13-.07-.3.06-.4s.3-.07.4.06c.45.6.91,1.21,1.36,1.81.09.13.07.3-.06.4" fill="#fff"/>
+    <path d="M13.83,11.63c-.12.1-.3.09-.4-.03-.49-.58-.97-1.16-1.46-1.74-.1-.12-.09-.3.03-.4s.3-.09.4.03c.49.58.97,1.16,1.46,1.73.1.12.09.3-.03.4" fill="#fff"/>
+    <path d="M13.09,12.29c-.11.11-.29.1-.4-.01-.52-.55-1.04-1.1-1.55-1.65-.11-.11-.1-.29.01-.4s.29-.1.4.01c.52.55,1.04,1.1,1.55,1.65.11.11.1.29-.01.4" fill="#fff"/>
+    <path d="M12.38,12.99c-.11.11-.29.12-.4,0-.55-.52-1.09-1.04-1.64-1.57-.11-.11-.12-.29,0-.4.11-.11.29-.12.4,0,.55.52,1.09,1.04,1.64,1.56.11.11.12.29,0,.4" fill="#fff"/>
+    <path d="M11.72,13.73c-.1.12-.28.13-.4.03-.57-.49-1.15-.98-1.72-1.47-.12-.1-.13-.28-.03-.4.1-.12.28-.13.4-.03.57.49,1.15.98,1.72,1.47.12.1.13.28.03.4" fill="#fff"/>
+    <path d="M11.09,14.5c-.1.12-.27.15-.4.05-.6-.46-1.2-.92-1.8-1.38-.12-.1-.15-.27-.05-.4.1-.12.27-.15.4-.05.6.46,1.2.92,1.8,1.38.12.1.15.27.05.4" fill="#fff"/>
+    <path d="M10.51,15.31c-.09.13-.26.16-.39.08-.62-.43-1.25-.85-1.88-1.28-.13-.09-.16-.26-.07-.39.09-.13.26-.16.39-.07.62.43,1.25.85,1.88,1.28.13.09.16.26.07.39" fill="#fff"/>
+    <path d="M9.98,16.14c-.08.13-.26.18-.39.1-.65-.39-1.29-.78-1.94-1.17-.13-.08-.18-.26-.1-.39.08-.13.26-.18.39-.1.65.39,1.29.78,1.94,1.17.13.08.18.26.1.39" fill="#fff"/>
+    <path d="M9.49,17.01c-.07.14-.24.19-.38.12-.67-.35-1.34-.71-2-1.06-.14-.07-.19-.24-.12-.38.07-.14.24-.19.38-.12.67.35,1.34.71,2,1.06.14.07.19.24.12.38" fill="#fff"/>
+    <path d="M9.04,17.9c-.07.14-.23.2-.38.14-.69-.32-1.37-.63-2.06-.95-.14-.07-.2-.23-.14-.38s.23-.2.38-.14c.69.32,1.37.63,2.06.95.14.07.2.23.14.38" fill="#fff"/>
+    <polygon points="31.28 7.4 30.32 8.01 28.73 7.51 30.78 6.23 29.74 3.94 31.23 4.41 31.82 5.7 33.04 4.98 34.53 5.45 32.36 6.72 33.3 8.95 31.71 8.45 31.28 7.4" fill="#fff"/>
+    <path d="M39.92,9.35c-.16-.12-.34-.22-.53-.28-.18-.06-.37-.08-.56-.07-.2.02-.41.09-.58.2-.09.06-.18.13-.26.21-.07.08-.14.17-.19.27-.1.18-.15.39-.16.59,0,.19.04.38.11.55.08.19.19.36.32.51.48.45.96.89,1.44,1.34.61-.66,1.23-1.33,1.84-1.99-.48-.45-.96-.89-1.44-1.34Z" fill="#fff"/>
+    <polygon points="40.45 13.84 41.01 14.6 43.92 13.96 43.48 13.36 42.92 13.48 42.07 12.33 42.35 11.83 41.9 11.23 40.45 13.84" fill="#fff"/>
+    <polygon points="44.39 16.37 42.57 17.32 42.91 17.96 45.33 16.7 44.1 14.35 43.5 14.67 44.39 16.37" fill="#fff"/>
+    <path d="M45.98,18.29c-.05-.17-.14-.32-.27-.44-.09-.09-.2-.16-.32-.19-.14-.04-.29-.03-.42.01-.14.05-.27.14-.36.26-.08.12-.12.26-.13.4-.09-.07-.19-.13-.3-.16-.12-.03-.25-.03-.38.01-.12.04-.24.11-.32.21-.1.11-.15.26-.16.41,0,.09,0,.17.02.26.23.75.45,1.51.68,2.26.88-.26,1.75-.53,2.63-.79-.22-.75-.45-1.49-.67-2.24Z" fill="#fff"/>
+    <path d="M46.85,29.51c.04-.17.04-.35-.01-.52-.03-.12-.09-.24-.18-.33-.1-.1-.23-.17-.37-.2-.15-.03-.3-.01-.44.05-.13.06-.23.16-.31.28-.04-.11-.1-.21-.18-.29-.09-.09-.21-.15-.33-.18-.13-.03-.26-.02-.38.02-.14.05-.26.15-.35.28-.05.07-.09.15-.11.23-.18.77-.36,1.53-.54,2.3.89.21,1.78.42,2.67.63.18-.76.36-1.52.54-2.28Z" fill="#fff"/>
+    <polygon points="46.03 22.55 44.11 21.65 44.21 22.36 45.54 22.98 44.43 23.95 44.53 24.66 46.13 23.27 47.06 23.14 46.96 22.42 46.03 22.55" fill="#fff"/>
+    <polygon points="34.27 8.66 36.75 10.22 38.21 7.88 35.73 6.33 35.37 6.9 37.24 8.08 37.01 8.44 35.41 7.43 35.08 7.96 36.68 8.97 36.47 9.3 34.6 8.13 34.27 8.66" fill="#fff"/>
+    <polygon points="44.48 24.74 44.37 27.66 47.12 27.78 47.24 24.85 46.56 24.82 46.47 27.03 46.04 27.01 46.12 25.12 45.5 25.1 45.42 26.99 45.02 26.97 45.11 24.77 44.48 24.74" fill="#fff"/>
+  </g>
+  <g id="red-layer-2">
+    <polygon points="31.41 6.98 30.28 7.7 29.4 7.42 31.15 6.34 30.26 4.4 31.02 4.64 31.69 6.1 33.07 5.29 33.83 5.53 32 6.61 32.8 8.5 31.93 8.22 31.41 6.98" fill="#e71e21"/>
+    <path d="M39.47,9.84c-.11-.07-.23-.12-.36-.13-.13,0-.27.02-.38.09-.07.04-.12.09-.18.14-.05.05-.09.12-.13.19-.06.12-.08.26-.06.39.02.13.08.25.16.35.31.29.62.58.93.86.31-.34.63-.68.94-1.02-.31-.29-.62-.58-.93-.86Z" fill="#e71e21"/>
+    <polygon points="41.74 12.91 41.22 13.85 42.27 13.62 41.74 12.91" fill="#e71e21"/>
+    <path d="M44.42,18.95s-.04-.09-.08-.12c-.04-.03-.08-.04-.13-.04-.05,0-.1.01-.14.04-.04.03-.07.09-.08.14,0,.03,0,.07.02.1.14.46.28.92.42,1.39.14-.04.27-.08.41-.12-.14-.46-.28-.92-.42-1.39Z" fill="#e71e21"/>
+    <path d="M45.4,18.66s-.04-.09-.08-.12c-.04-.03-.08-.04-.13-.04-.05,0-.1.01-.14.04-.04.03-.07.09-.08.14,0,.03,0,.07.02.1.14.46.28.92.42,1.39.14-.04.27-.08.41-.12-.14-.46-.28-.92-.42-1.39Z" fill="#e71e21"/>
+    <path d="M45.17,29.3s.01-.1,0-.15c-.02-.04-.05-.08-.09-.1-.04-.03-.09-.04-.14-.03-.06,0-.11.04-.14.09-.02.03-.03.06-.04.1-.11.47-.22.94-.33,1.41l.41.1c.11-.47.22-.94.33-1.41Z" fill="#e71e21"/>
+    <path d="M46.16,29.54s.01-.1,0-.15c-.02-.04-.05-.08-.09-.1-.04-.03-.09-.04-.14-.03-.05,0-.11.04-.14.09-.02.03-.03.06-.04.1-.11.47-.22.94-.33,1.41.14.03.28.07.41.1.11-.47.22-.94.33-1.41Z" fill="#e71e21"/>
   </g>
 </svg>`;
 
   // ============================================================
   // 物理尺寸假設（可依實際成品規格調整這幾個常數即可，不用改其他程式碼）
   // ============================================================
-  const FRAME_INNER_RADIUS_PX = 138;      // 有外框時，內圈開孔（照片可視範圍）半徑
-  const BLEED_MM = 1;                     // 出血延伸量 1mm（裁切圈 + 1mm = 印刷邊界）
+  // 內圈開孔半徑的備援值；正常情況由 getFrameMetrics() 自動從外框圖形偵測
+  const FRAME_INNER_RADIUS_FALLBACK = 138;
+  // 出血量不再獨立設定，改由「貼紙直徑 − 裁切直徑」推導，
+  // 確保照片內容剛好清晰到裁切線為止，出血只填補裁切線以外的區域。
+  function bleedMM() {
+    return (STICKER_PRINTED_DIAMETER_MM - CUT_CIRCLE_DIAMETER_MM) / 2;
+  }
 
   // ---- 7-11 ibon 4x6 實際規格 ----
   // 官方規格：專用紙 10cm x 14.8cm（不是國際 4x6 吋的 101.6 x 152.4mm）。
@@ -348,7 +525,12 @@
 
   const SHEET_ROWS = 7;
   const SHEET_COLS = 5;
-  const CUT_LINE_INSET_MM = 1;           // 切刀對位線往內縮 1mm（18mm 圈 → 16mm 裁切）
+  // 格線模式的內縮量同樣由裁切直徑推導，
+  // 讓「圓形」與「直線格線」兩種模式裁出的成品尺寸完全一致。
+  function cutLineInsetMM() {
+    return (STICKER_PRINTED_DIAMETER_MM - CUT_CIRCLE_DIAMETER_MM) / 2;
+  }
+  const CUT_CIRCLE_DIAMETER_MM = 16.2;   // 圓形模式：裁切圓直徑
   const ROW_GAP_MM = 1;                  // 排與排之間的固定間距（mm），方便裁切
 
   // 每個圈「印出來的實際直徑」（mm）——所見即所得，不再是檔案上的抽象數值
@@ -357,17 +539,23 @@
   // 單貼紙編輯畫布固定 360px 代表一整顆貼紙，故比例隨實際直徑換算，
   // 確保 1mm 出血與 16mm 裁切圈在任何直徑設定下都維持正確比例
   function pxPerMMSingle() { return 360 / STICKER_PRINTED_DIAMETER_MM; }
+  // 全圖模式下照片內容的可視半徑 = 裁切圓半徑（內容清晰到裁切線為止）
   function cutRadiusPx() {
-    return (STICKER_PRINTED_DIAMETER_MM / 2 - BLEED_MM) * pxPerMMSingle();
+    return (CUT_CIRCLE_DIAMETER_MM / 2) * pxPerMMSingle();
   }
 
   const canvas = document.getElementById('canvas');
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
   let currentMode = 'single';
   let svgDom = null;
   let svgNaturalSize = { w: 360, h: 360 };
   let templateSvgImg = new Image();
+  // 外框圖形實際內容相對圖檔中心的偏移，換色/換圖時重設（宣告需早於初始化流程）
+  let frameOffsetCache = null;
+  // 打樣圖與單張預覽的裁切線顏色，與排版頁各自獨立。
+  // 必須在此提前宣告：draw() 於初始化階段就會讀取它。
+  let proofLineColorValue = '#ffffff';
   let userImg = null;
 
   let savedRowCanvases = [null, null, null, null, null, null, null];
@@ -403,16 +591,31 @@
     if (currentMode === 'sheet') draw();
   };
 
-  // ---- 解析內嵌的外框 SVG（取代原本對外部檔案的 fetch）----
-  (function initFrameSvg() {
+  // ---- 外框切換：右迴旋 / 左迴旋 ----
+  // 兩種迴旋是不同設計（非鏡像），各自內嵌一份正式 SVG。
+  const FRAMES = {
+    right: { label: '右迴旋', svg: FRAME_SVG_RIGHT },
+    left:  { label: '左迴旋', svg: FRAME_SVG_LEFT }
+  };
+  let currentFrameKey = 'right';
+
+  function loadFrame(key) {
+    const frame = FRAMES[key];
+    if (!frame) return;
+    currentFrameKey = key;
+
     const parser = new DOMParser();
-    const svgDoc = parser.parseFromString(FRAME_SVG_MARKUP, "image/svg+xml");
+    const svgDoc = parser.parseFromString(frame.svg, "image/svg+xml");
     svgDom = svgDoc.querySelector('svg');
-    if (svgDom) {
-      svgNaturalSize = getSvgNaturalSize(svgDom);
-    }
+    svgNaturalSize = svgDom ? getSvgNaturalSize(svgDom) : { w: 360, h: 360 };
+
+    // 換外框後，先前偵測到的置中偏移與內圈半徑都已失效
+    frameOffsetCache = null;
+
     updateSvgColorsAndDraw();
-  })();
+  }
+
+  loadFrame('right');
 
   function getSvgNaturalSize(svgEl) {
     const vb = svgEl.getAttribute('viewBox');
@@ -462,7 +665,7 @@
     const snapshotCanvas = document.createElement('canvas');
     snapshotCanvas.width = 360;
     snapshotCanvas.height = 360;
-    const snapCtx = snapshotCanvas.getContext('2d');
+    const snapCtx = snapshotCanvas.getContext('2d', { willReadFrequently: true });
 
     drawSingleSticker(snapCtx, 180, 180, 360);
 
@@ -508,30 +711,40 @@
     return Math.floor(Math.min(byWidth, byHeight) * 10) / 10;
   }
 
+  // 圈徑下限：必須大於裁切直徑，否則裁切圓會超出貼紙、出血變成負值。
+  // 每邊至少保留 MIN_BLEED_MM 的出血，裁切才有容錯空間。
+  const MIN_BLEED_MM = 0.2;
+  function minDiameterMM() {
+    return Math.ceil((CUT_CIRCLE_DIAMETER_MM + MIN_BLEED_MM * 2) * 10) / 10;
+  }
+
   function setSheetDiameter(val, syncBoth = true) {
     let v = parseFloat(val);
     if (isNaN(v)) v = 18;
     const max = maxDiameterMM();
-    v = Math.min(Math.max(v, 8), max);
+    const min = minDiameterMM();
+    v = Math.min(Math.max(v, min), max);
     v = Math.round(v * 10) / 10;
     STICKER_PRINTED_DIAMETER_MM = v;
 
     sheetDiaInput.max = max;
     sheetDiaNum.max = max;
+    sheetDiaInput.min = min;
+    sheetDiaNum.min = min;
     if (syncBoth) {
       sheetDiaInput.value = v;
       sheetDiaNum.value = v;
     }
 
     const px = v * (FILE_H_PX / PRINT_AREA_HEIGHT_MM);
-    const cutDia = v - BLEED_MM * 2;
+    const cutDia = CUT_CIRCLE_DIAMETER_MM;
     const totalW = SHEET_COLS * v;
     const totalH = SHEET_ROWS * v + (SHEET_ROWS - 1) * ROW_GAP_MM;
 
     diaInfo.innerHTML =
       `這是<b>印出來的實際直徑</b>（檔案內 ${px.toFixed(1)} px），裁切後成品約 <b>${cutDia.toFixed(1)} mm</b>。` +
       `<br>排版佔用 ${totalW.toFixed(1)} × ${totalH.toFixed(1)} mm ／ 可印區 ` +
-      `${printAreaWidthMM().toFixed(1)} × ${PRINT_AREA_HEIGHT_MM.toFixed(1)} mm（上限 ${max} mm）`;
+      `${printAreaWidthMM().toFixed(1)} × ${PRINT_AREA_HEIGHT_MM.toFixed(1)} mm（可設 ${min}～${max} mm）`;
 
     if (currentMode === 'sheet') draw();
   }
@@ -541,32 +754,49 @@
   // ---- 實測校準 ----
   // 印出來的尺寸不符時，代表「可列印區域高度」的假設有誤，
   // 而非圈直徑設錯——修正 PRINT_AREA_HEIGHT_MM 才是治本做法。
+  // 因為整張圖是等比縮放，任一尺寸的誤差比例即代表全圖的誤差比例。
   document.getElementById('calApplyBtn').addEventListener('click', () => {
-    const target = parseFloat(document.getElementById('calTarget').value);
+    const what = document.getElementById('calWhat').value;
     const measured = parseFloat(document.getElementById('calMeasured').value);
     const result = document.getElementById('calResult');
 
-    if (isNaN(target) || isNaN(measured) || measured <= 0 || target <= 0) {
-      result.innerHTML = '<span style="color:#dc3545;">請填入有效的目標與實測數值。</span>';
+    // 預期值直接取自目前設定，不需使用者再填一次
+    const expected = (what === 'cut')
+      ? CUT_CIRCLE_DIAMETER_MM
+      : STICKER_PRINTED_DIAMETER_MM;
+    const label = (what === 'cut') ? '裁切線內圈' : '貼紙外圈';
+
+    if (isNaN(measured) || measured <= 0) {
+      result.innerHTML = '<span style="color:#dc3545;">請填入實際量到的數值。</span>';
+      return;
+    }
+    if (Math.abs(measured / expected - 1) > 0.25) {
+      result.innerHTML = `<span style="color:#dc3545;">量到 ${measured}mm 與預期的 ${expected}mm ` +
+        `差距過大，請確認量的是「${label}」。</span>`;
       return;
     }
 
-    // 設定 D 卻印出 M，表示實際可印高度 = 目前假設值 × M / D
-    const setD = STICKER_PRINTED_DIAMETER_MM;
-    PRINT_AREA_HEIGHT_MM = PRINT_AREA_HEIGHT_MM * measured / setD;
+    const before = STICKER_PRINTED_DIAMETER_MM;
+    const factor = measured / expected;
+    PRINT_AREA_HEIGHT_MM = PRINT_AREA_HEIGHT_MM * factor;
 
-    setSheetDiameter(target);
-
+    // 沿用原本的圈直徑；若校準後版面放不下會自動夾到上限
+    setSheetDiameter(before);
     const applied = STICKER_PRINTED_DIAMETER_MM;
-    const note = Math.abs(applied - target) > 0.05
-      ? `（受版面限制，已調整為 ${applied} mm）`
-      : '';
-    result.innerHTML =
-      `✅ 已校準：實際可印區域為 <b>${printAreaWidthMM().toFixed(1)} × ${PRINT_AREA_HEIGHT_MM.toFixed(1)} mm</b>` +
-      `（紙張 ${PAPER_WIDTH_MM}×${PAPER_HEIGHT_MM}mm，四周白邊約 ` +
+
+    let msg = `✅ 已校準：整張圖縮放誤差 <b>${((factor - 1) * 100).toFixed(2)}%</b>，` +
+      `實際可印區域修正為 <b>${printAreaWidthMM().toFixed(1)} × ${PRINT_AREA_HEIGHT_MM.toFixed(1)} mm</b>` +
+      `（紙張 ${PAPER_WIDTH_MM}×${PAPER_HEIGHT_MM}mm，白邊約 ` +
       `${((PAPER_WIDTH_MM - printAreaWidthMM()) / 2).toFixed(1)}／` +
-      `${((PAPER_HEIGHT_MM - PRINT_AREA_HEIGHT_MM) / 2).toFixed(1)} mm）。` +
-      `<br>圈直徑已設為 <b>${applied} mm</b>${note}，重新下載即可印出正確尺寸。`;
+      `${((PAPER_HEIGHT_MM - PRINT_AREA_HEIGHT_MM) / 2).toFixed(1)} mm）。`;
+
+    if (Math.abs(applied - before) > 0.05) {
+      msg += `<br><span style="color:#dc3545;">⚠️ 校準後 5 欄放不下 ${before}mm，` +
+        `圈直徑已自動降為上限 <b>${applied} mm</b>。</span>`;
+    } else {
+      msg += `<br>圈直徑維持 <b>${applied} mm</b>，重新下載即可印出正確尺寸。`;
+    }
+    result.innerHTML = msg;
   });
 
   setSheetDiameter(STICKER_PRINTED_DIAMETER_MM);
@@ -577,6 +807,7 @@
 
   const showCutLineCheck = document.getElementById('showCutLineCheck');
   const cutLineOptions = document.getElementById('cutLineOptions');
+  document.getElementById('cutLineShape').addEventListener('change', () => redrawSheet());
 
   function redrawSheet() {
     if (currentMode === 'sheet') draw();
@@ -589,25 +820,53 @@
     redrawSheet();
   });
 
-  const cutLineBtns = {
-    '#000000': document.getElementById('cutLineBlackBtn'),
-    '#ff5722': document.getElementById('cutLineOrangeBtn'),
-    '#00bcd4': document.getElementById('cutLineCyanBtn')
-  };
-
-  function setCutLineColor(hex) {
-    cutLineColorValue = hex;
-    // 用外框標示目前選中的顏色，避免不知道現在是哪一色
-    Object.entries(cutLineBtns).forEach(([c, btn]) => {
-      btn.style.outline = (c === hex) ? '3px solid #007bff' : 'none';
-      btn.style.outlineOffset = '1px';
+  // ---- 共用：顏色按鈕群組 ----
+  // 綁定一組色票按鈕，點選後標示選中狀態並回呼。
+  // 排版頁的裁切線與打樣圖的裁切線各自獨立一組，互不干擾。
+  function bindColorButtons(idMap, initial, onPick) {
+    const btns = {};
+    Object.entries(idMap).forEach(([hex, id]) => {
+      const el = document.getElementById(id);
+      if (el) btns[hex] = el;
     });
-    redrawSheet();
+    function pick(hex) {
+      Object.entries(btns).forEach(([c, btn]) => {
+        // 用外框標示目前選中的顏色，避免不知道現在是哪一色
+        btn.style.outline = (c === hex) ? '3px solid #007bff' : 'none';
+        btn.style.outlineOffset = '1px';
+      });
+      onPick(hex);
+    }
+    Object.entries(btns).forEach(([hex, btn]) => {
+      btn.addEventListener('click', () => pick(hex));
+    });
+    pick(initial);
   }
-  Object.entries(cutLineBtns).forEach(([hex, btn]) => {
-    btn.addEventListener('click', () => setCutLineColor(hex));
+
+  bindColorButtons({
+    '#000000': 'cutLineBlackBtn',
+    '#ff5722': 'cutLineOrangeBtn',
+    '#00bcd4': 'cutLineCyanBtn',
+    '#ffffff': 'cutLineWhiteBtn'
+  }, cutLineColorValue, (hex) => {
+    cutLineColorValue = hex;
+    redrawSheet();
   });
-  setCutLineColor(cutLineColorValue);
+
+  // 打樣圖與單張預覽共用的裁切線顏色（宣告見檔案上方，draw() 初始化時就會用到）
+  bindColorButtons({
+    '#000000': 'proofBlackBtn',
+    '#ff5722': 'proofOrangeBtn',
+    '#00bcd4': 'proofCyanBtn',
+    '#ffffff': 'proofWhiteBtn'
+  }, proofLineColorValue, (hex) => {
+    proofLineColorValue = hex;
+    if (currentMode === 'single') draw();
+  });
+
+  document.getElementById('showPreviewCutCheck').addEventListener('change', () => {
+    if (currentMode === 'single') draw();
+  });
 
   document.getElementById('clearAllRowsBtn').addEventListener('click', () => {
     savedRowCanvases = [null, null, null, null, null, null, null];
@@ -633,7 +892,7 @@
   function calculateBaseFitScale() {
     if (!userImg) return;
     const hideFrame = document.getElementById('hideFrameCheck').checked;
-    const targetDiameter = hideFrame ? (cutRadiusPx() * 2) : (FRAME_INNER_RADIUS_PX * 2);
+    const targetDiameter = hideFrame ? (cutRadiusPx() * 2) : (frameInnerRadiusPx() * 2);
     const minEdge = Math.min(userImg.width, userImg.height);
 
     baseFitScale = targetDiameter / minEdge;
@@ -644,6 +903,28 @@
     syncPositionUI();
     syncScaleUI();
   }
+
+  // ---- 外框類型切換按鈕 ----
+  const frameBtns = {
+    right: document.getElementById('frameRightBtn'),
+    left: document.getElementById('frameLeftBtn')
+  };
+  function selectFrame(key) {
+    loadFrame(key);
+    Object.entries(frameBtns).forEach(([k, btn]) => {
+      // 選中者加深底色並加外框，避免不知道目前是哪一種
+      btn.style.background = (k === key) ? '#0d6efd' : '#17a2b8';
+      btn.style.outline = (k === key) ? '3px solid #b6d4fe' : 'none';
+      btn.style.outlineOffset = '1px';
+    });
+    // 不重算圖片縮放：兩種迴旋的內圈開孔相同，
+    // 重置會把使用者辛苦調好的位置與縮放歸零。
+    draw();
+  }
+  Object.keys(frameBtns).forEach(k => {
+    frameBtns[k].addEventListener('click', () => selectFrame(k));
+  });
+  selectFrame('right');
 
   document.getElementById('imageInput').addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -684,7 +965,8 @@
       colorSection.style.opacity = '1';
       colorSection.style.pointerEvents = 'auto';
     }
-    if (userImg) calculateBaseFitScale();
+    // 不重算圖片縮放：保留使用者調好的位置與縮放，
+    // 讓有框／無框可以來回比較而不必重調。
     draw();
   });
 
@@ -738,16 +1020,38 @@
     const handled = new Set();
 
     // 1) 明確以 id 指定的圖層
-    [['#red-layer', cRed], ['#black-layer', cBlack], ['#white-layer', cWhite]].forEach(([sel, color]) => {
-      const el = rootSvg.querySelector(sel);
-      if (!el) return;
-      const nodes = [el, ...el.querySelectorAll('*')];
-      nodes.forEach(node => {
-        if (node.hasAttribute('fill') && node.getAttribute('fill') !== 'none') node.setAttribute('fill', color);
-        if (node.hasAttribute('stroke') && node.getAttribute('stroke') !== 'none') node.setAttribute('stroke', color);
-        handled.add(node);
+    // 相容 Illustrator 的重複圖層命名：同名圖層會被自動改成 red-layer-2、
+    // red-layer-3…，並保留 data-name="red-layer"。因此改用「前綴比對」，
+    // 讓同色系的多個圖層都能一起套色（例如需要疊在最上層的第二個紅色圖層）。
+    // 圖層的上下疊放順序由 SVG 原始文件順序決定，這裡只改顏色、不動順序。
+    //
+    // Illustrator 若以「內部 CSS」匯出，樣式會寫在 <style> 的 class 裡
+    // （常見為 fill:none; stroke:#000，即線稿）。CSS 優先權高於
+    // presentation attribute，因此必須先移除 class，改用屬性直接指定顏色，
+    // 並把線稿轉成實心填色，才能呈現分區色塊。
+    const SHAPE_TAGS = new Set(['path', 'polygon', 'polyline', 'circle', 'ellipse', 'rect', 'line']);
+    let layerFound = false;
+
+    [['red-layer', cRed], ['black-layer', cBlack], ['white-layer', cWhite]].forEach(([base, color]) => {
+      const groups = rootSvg.querySelectorAll(`[id^="${base}"], [data-name^="${base}"]`);
+      groups.forEach(el => {
+        layerFound = true;
+        const nodes = [el, ...el.querySelectorAll('*')];
+        nodes.forEach(node => {
+          handled.add(node);
+          if (!SHAPE_TAGS.has(node.tagName.toLowerCase())) return;
+          node.removeAttribute('class');
+          node.removeAttribute('style');
+          node.setAttribute('fill', color);
+          node.setAttribute('stroke', 'none');
+        });
       });
     });
+
+    // 圖層已直接指定顏色，殘留的 <style> 規則只會干擾（例如把 fill 蓋回 none）
+    if (layerFound) {
+      rootSvg.querySelectorAll('style').forEach(node => node.remove());
+    }
 
     // 2) fallback：依實際顏色值比對
     //    （Rhino 匯出的 SVG 沒有圖層 id，只能靠純紅/純黑/純白的顏色值辨識）
@@ -792,6 +1096,8 @@
       const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
       const url = URL.createObjectURL(svgBlob);
 
+      // 外框重新光柵化，先前算出的內容偏移已失效
+      frameOffsetCache = null;
       templateSvgImg.onload = () => { draw(); URL.revokeObjectURL(url); };
       templateSvgImg.src = url;
     } else {
@@ -852,13 +1158,81 @@
     ctx.putImageData(imgData, left, top);
   }
 
+  // ---- 偵測外框圖形的實際偏移與內圈開孔半徑 ----
+  // 掃描光柵化後的不透明像素：
+  //  1. 取內容範圍中心，算出相對圖檔中心的偏移比例（修正 CAD/AI 匯出的偏移）
+  //  2. 從中心向外放射取樣，找出首次碰到圖形的距離 = 內圈開孔半徑
+  // 這樣換外框時不必再手動調整常數。結果快取，只在外框重新載入時重算。
+  function getFrameMetrics() {
+    if (frameOffsetCache) return frameOffsetCache;
+    const fallback = { dx: 0, dy: 0, innerR: FRAME_INNER_RADIUS_FALLBACK / 360 };
+    try {
+      const N = 240;
+      const off = document.createElement('canvas');
+      off.width = N; off.height = N;
+      const octx = off.getContext('2d', { willReadFrequently: true });
+      octx.drawImage(templateSvgImg, 0, 0, N, N);
+      const data = octx.getImageData(0, 0, N, N).data;
+      const opaque = (x, y) =>
+        x >= 0 && y >= 0 && x < N && y < N && data[(y * N + x) * 4 + 3] > 8;
+
+      let minX = N, minY = N, maxX = -1, maxY = -1;
+      for (let y = 0; y < N; y++) {
+        for (let x = 0; x < N; x++) {
+          if (opaque(x, y)) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+      if (maxX < 0) return fallback;
+
+      const ccx = (minX + maxX + 1) / 2;
+      const ccy = (minY + maxY + 1) / 2;
+
+      // 由內容中心向外放射掃描，取各角度首次碰到圖形距離的中位數；
+      // 用中位數可忽略少數穿進內圈的裝飾線造成的偏差
+      const hits = [];
+      const RAYS = 72;
+      const maxR = Math.min(maxX - ccx, ccx - minX, maxY - ccy, ccy - minY);
+      for (let i = 0; i < RAYS; i++) {
+        const a = (i / RAYS) * Math.PI * 2;
+        const ux = Math.cos(a), uy = Math.sin(a);
+        for (let r = 2; r <= maxR; r++) {
+          if (opaque(Math.round(ccx + ux * r), Math.round(ccy + uy * r))) {
+            hits.push(r);
+            break;
+          }
+        }
+      }
+      hits.sort((a, b) => a - b);
+      const innerRpx = hits.length ? hits[Math.floor(hits.length / 2)] : maxR;
+
+      frameOffsetCache = {
+        dx: (ccx - N / 2) / N,
+        dy: (ccy - N / 2) / N,
+        innerR: innerRpx / N
+      };
+      return frameOffsetCache;
+    } catch (e) {
+      return fallback;   // 光柵化失敗（例如跨來源限制）時維持預設值
+    }
+  }
+
+  // 有外框時的內圈開孔半徑（換算到 360px 基準畫布）
+  function frameInnerRadiusPx() {
+    return getFrameMetrics().innerR * 360;
+  }
+
   function drawSingleSticker(targetCtx, cx, cy, diameter) {
     const s = diameter / 360;
     const hideFrame = document.getElementById('hideFrameCheck').checked;
 
     // 全圖模式：一律以「16mm 實際裁切線」為基準圓，不是印刷邊界(18mm)，
     // 避免把裁切線以外的內容也當成有效可視範圍
-    const innerR = hideFrame ? (cutRadiusPx() * s) : (FRAME_INNER_RADIUS_PX * s);
+    const innerR = hideFrame ? (cutRadiusPx() * s) : (frameInnerRadiusPx() * s);
 
     if (userImg) {
       targetCtx.save();
@@ -883,7 +1257,7 @@
         // 出血不是把圖片放大（那樣會讓 16mm 以內的內容跟著跑掉／超出裁切線），
         // 而是把 16mm 裁切線邊緣的像素顏色，以放射狀方式往外「複製延伸」1mm，
         // 產生一圈不影響原圖內容、單純填補裁切誤差用的邊緣色出血。
-        const bleedR = innerR + BLEED_MM * pxPerMMSingle() * s;
+        const bleedR = innerR + bleedMM() * pxPerMMSingle() * s;
         applyRadialEdgeBleed(targetCtx, cx, cy, innerR, bleedR);
       }
     } else {
@@ -894,12 +1268,21 @@
     }
 
     if (!hideFrame && templateSvgImg.complete && templateSvgImg.naturalWidth !== 0) {
-      // 依外框 SVG 的「原始尺寸比例」置中繪製（contain-fit，不強制拉伸變形）
+      // 依外框 SVG 的原始比例 contain-fit（不拉伸變形），
+      // 但改用「實際圖形內容」的中心對齊，而非 viewBox 的中心——
+      // 因為 CAD 匯出的 SVG 常有大片空白畫布、圖形偏在一角，
+      // 若照 viewBox 置中，外框就會偏離格子中心，看起來像裁切圓沒對準。
       const boxSize = diameter;
       const fitScale = Math.min(boxSize / svgNaturalSize.w, boxSize / svgNaturalSize.h);
       const drawW = svgNaturalSize.w * fitScale;
       const drawH = svgNaturalSize.h * fitScale;
-      targetCtx.drawImage(templateSvgImg, cx - drawW / 2, cy - drawH / 2, drawW, drawH);
+      const off = getFrameMetrics();
+      targetCtx.drawImage(
+        templateSvgImg,
+        cx - drawW / 2 - off.dx * drawW,
+        cy - drawH / 2 - off.dy * drawH,
+        drawW, drawH
+      );
     }
   }
 
@@ -918,7 +1301,7 @@
     const pxPerMM = sheetHeight / PRINT_AREA_HEIGHT_MM;
 
     const stickerDiameter = STICKER_PRINTED_DIAMETER_MM * pxPerMM;  // 印出來的實際直徑
-    const insetPx = CUT_LINE_INSET_MM * pxPerMM;                    // 切刀線內縮 1mm（對齊16mm）
+    const insetPx = cutLineInsetMM() * pxPerMM;
     const rowGapPx = ROW_GAP_MM * pxPerMM;                          // 排與排之間的額外間距
 
     const stepX = stickerDiameter;
@@ -929,49 +1312,92 @@
     const marginX = (sheetWidth - cols * stickerDiameter) / 2;
     const marginY = (sheetHeight - totalHeight) / 2;
 
-    // 先繪製每張貼紙圖案
+    // 先繪製每張貼紙圖案。未派發的排完全不畫（含灰底佔位圓），
+    // 讓預覽所見即所得，也避免佔位圖形被一起印出來。
     for (let r = 0; r < rows; r++) {
       const rowCanvas = savedRowCanvases[r];
+      if (!rowCanvas) continue;
       for (let c = 0; c < cols; c++) {
         const cx = marginX + c * stepX + stickerDiameter / 2;
         const cy = marginY + r * stepY + stickerDiameter / 2;
-
-        if (rowCanvas) {
-          targetCtx.drawImage(rowCanvas, cx - stickerDiameter / 2, cy - stickerDiameter / 2, stickerDiameter, stickerDiameter);
-        } else {
-          targetCtx.fillStyle = "#E0E0E0";
-          targetCtx.beginPath();
-          targetCtx.arc(cx, cy, stickerDiameter * 0.38, 0, Math.PI * 2);
-          targetCtx.fill();
-        }
+        targetCtx.drawImage(rowCanvas, cx - stickerDiameter / 2, cy - stickerDiameter / 2, stickerDiameter, stickerDiameter);
       }
     }
 
-    // 再疊上滿版切刀對位格線：橫線貫穿整張紙寬度、直線貫穿整張紙高度，
-    // 對齊在每排/每欄往內 1mm（16mm）的裁切位置
+    // 再疊上切刀對位線。未派發的排不畫線，避免空白處印出多餘線條。
     if (!document.getElementById('showCutLineCheck').checked) return;
+
+    const filledRows = [];
+    for (let r = 0; r < rows; r++) {
+      if (savedRowCanvases[r]) filledRows.push(r);
+    }
+    if (filledRows.length === 0) return;   // 全空，整張不畫線
 
     targetCtx.save();
     targetCtx.strokeStyle = cutLineColorValue;
     // 線寬以「預覽畫布(400px寬)」為基準，需依實際畫布寬度等比放大，
     // 確保預覽看到的粗細與匯出的 1200px 檔案一致
-    targetCtx.lineWidth = Math.max(0.5, CUT_LINE_WIDTH_PX * (sheetWidth / 400));
+    const lineW = Math.max(0.5, CUT_LINE_WIDTH_PX * (sheetWidth / 400));
+    targetCtx.lineWidth = lineW;
 
     targetCtx.beginPath();
-    for (let r = 0; r <= rows; r++) {
-      // 前 rows 條對齊各排圓形頂端往內 1mm；最後一條為收尾線，
-      // 需貼齊「最後一排圓形的底部」，否則會被排間距推到空白處
-      const y = (r < rows)
-        ? marginY + r * stepY + insetPx
-        : marginY + (rows - 1) * stepY + stickerDiameter + insetPx;
-      targetCtx.moveTo(0, y);
-      targetCtx.lineTo(sheetWidth, y);
+
+    if (document.getElementById('cutLineShape').value === 'circle') {
+      // 圓形模式：讓線的「內緣」貼齊 16.2mm，成品直徑才會剛好是 16.2mm。
+      // Canvas 的 stroke 是沿路徑置中描繪（各半在路徑內外），
+      // 所以路徑半徑要往外推半個線寬，整條線才會完全落在 16.2mm 之外。
+      const cutR = (CUT_CIRCLE_DIAMETER_MM / 2) * pxPerMM + lineW / 2;
+      filledRows.forEach(r => {
+        for (let c = 0; c < cols; c++) {
+          const cx = marginX + c * stepX + stickerDiameter / 2;
+          const cy = marginY + r * stepY + stickerDiameter / 2;
+          targetCtx.moveTo(cx + cutR, cy);   // 移到起點，避免與前一個圓連成線
+          targetCtx.arc(cx, cy, cutR, 0, Math.PI * 2);
+        }
+      });
+    } else {
+      // 直線格線模式：逐排畫出該排的裁切框線。
+      // 不再貫穿整張紙，否則空白排也會被畫到；
+      // 每排畫上下兩條橫線（該排圓形往內 1mm 的上下切線），
+      // 直線則只在該排的高度範圍內延伸。
+      filledRows.forEach(r => {
+        const rowTop = marginY + r * stepY;
+        const yTop = rowTop + insetPx;
+        const yBottom = rowTop + stickerDiameter - insetPx;
+
+        targetCtx.moveTo(0, yTop);
+        targetCtx.lineTo(sheetWidth, yTop);
+        targetCtx.moveTo(0, yBottom);
+        targetCtx.lineTo(sheetWidth, yBottom);
+
+        for (let c = 0; c <= cols; c++) {
+          const x = (c < cols)
+            ? marginX + c * stepX + insetPx
+            : marginX + (cols - 1) * stepX + stickerDiameter - insetPx;
+          targetCtx.moveTo(x, yTop);
+          targetCtx.lineTo(x, yBottom);
+        }
+      });
     }
-    for (let c = 0; c <= cols; c++) {
-      const x = marginX + c * stepX + insetPx;
-      targetCtx.moveTo(x, 0);
-      targetCtx.lineTo(x, sheetHeight);
-    }
+
+    targetCtx.stroke();
+    targetCtx.restore();
+  }
+
+  // ---- 共用：在單張貼紙上疊繪裁切圓 ----
+  // 預覽與打樣圖共用同一套幾何，確保畫面所見與輸出一致。
+  // 線的「內緣」貼齊裁切直徑（stroke 為沿路徑置中描繪，故半徑外推半個線寬）。
+  function drawCutCircleOverlay(targetCtx, cx, cy, stickerPx, color, lineW) {
+    const ratio = CUT_CIRCLE_DIAMETER_MM / STICKER_PRINTED_DIAMETER_MM;
+    const cutR = (stickerPx / 2) * ratio + lineW / 2;
+
+    targetCtx.save();
+    targetCtx.strokeStyle = color;
+    targetCtx.lineWidth = lineW;
+    // 虛線：避免被誤認為圖案本身的一部分
+    targetCtx.setLineDash([stickerPx * 0.017, stickerPx * 0.011]);
+    targetCtx.beginPath();
+    targetCtx.arc(cx, cy, cutR, 0, Math.PI * 2);
     targetCtx.stroke();
     targetCtx.restore();
   }
@@ -980,6 +1406,9 @@
     if (currentMode === 'single') {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       drawSingleSticker(ctx, 180, 180, 360);
+      if (document.getElementById('showPreviewCutCheck').checked) {
+        drawCutCircleOverlay(ctx, 180, 180, 360, proofLineColorValue, 1.5);
+      }
     } else {
       drawSheetLayout(ctx, canvas.width, canvas.height);
     }
@@ -1022,6 +1451,18 @@
     startY = pos.y - imgState.y;
   }
 
+  // 觸控事件觸發頻率可能高於螢幕更新率，若每次都同步重繪會累積延遲
+  // （全圖模式的出血運算含 getImageData，成本更高）。改用 rAF 節流。
+  let drawScheduled = false;
+  function scheduleDraw() {
+    if (drawScheduled) return;
+    drawScheduled = true;
+    requestAnimationFrame(() => {
+      drawScheduled = false;
+      draw();
+    });
+  }
+
   function moveDrag(e) {
     if (!userImg || currentMode !== 'single') return;
 
@@ -1035,7 +1476,7 @@
       userScaleMultiplier = newScale;
 
       syncScaleUI();
-      draw();
+      scheduleDraw();
       return;
     }
 
@@ -1045,7 +1486,7 @@
       imgState.x = pos.x - startX;
       imgState.y = pos.y - startY;
       syncPositionUI();
-      draw();
+      scheduleDraw();
     }
   }
 
@@ -1073,20 +1514,13 @@
   canvas.addEventListener('touchmove', moveDrag, { passive: false });
   canvas.addEventListener('touchend', stopDrag);
 
-  document.getElementById('downloadSheetBtn').addEventListener('click', () => {
-    const outCanvas = document.createElement('canvas');
-    // 4x6 相片標準尺寸（300dpi）：4in x 6in = 1200 x 1800 px
-    outCanvas.width = 1200;
-    outCanvas.height = 1800;
-    const outCtx = outCanvas.getContext('2d');
-
-    drawSheetLayout(outCtx, 1200, 1800);
-
-    // 用 Blob 而非 toDataURL：1200x1800 的 PNG 轉成 base64 字串可達數 MB，
-    // 手機瀏覽器容易因字串過長而失敗或當掉
-    outCanvas.toBlob((blob) => {
+  // ---- 共用下載邏輯 ----
+  // 用 Blob 而非 toDataURL：大尺寸 PNG 轉 base64 字串可達數 MB，
+  // 手機瀏覽器容易因字串過長而失敗或當掉。
+  function downloadCanvas(sourceCanvas, filename) {
+    sourceCanvas.toBlob((blob) => {
       if (!blob) {
-        alert('產生列印檔失敗，請再試一次。');
+        alert('產生圖檔失敗，請再試一次。');
         return;
       }
       const url = URL.createObjectURL(blob);
@@ -1105,12 +1539,149 @@
         setTimeout(() => URL.revokeObjectURL(url), 60000);
       } else {
         const link = document.createElement('a');
-        link.download = 'CX_Stickers_4x6_PrintSheet.png';
+        link.download = filename;
         link.href = url;
         link.click();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
       }
     }, 'image/png');
+  }
+
+  document.getElementById('downloadSheetBtn').addEventListener('click', () => {
+    const outCanvas = document.createElement('canvas');
+    // 4x6 相片標準尺寸（300dpi）：4in x 6in = 1200 x 1800 px
+    outCanvas.width = 1200;
+    outCanvas.height = 1800;
+    drawSheetLayout(outCanvas.getContext('2d'), 1200, 1800);
+    downloadCanvas(outCanvas, 'CX_Stickers_4x6_PrintSheet.png');
+  });
+
+  // ---- 單張貼紙打樣圖（給客戶確認用）----
+  // 高解析度呈現一張貼紙，並疊上實際的 16.2mm 裁切線，
+  // 讓客戶一眼看出成品會裁成什麼樣子、哪些內容會被裁掉。
+  // 不標註任何尺寸數字（屬內部資訊）。
+  // ---- 三款比較打樣圖 ----
+  // 同一張照片分別套上左迴旋、右迴旋、無外框，並排輸出供客戶挑選。
+  // 需為每種外框各自光柵化一次 SVG（Image 載入是非同步），
+  // 因此整個流程以 Promise 串接。
+  function makeFrameImage(svgMarkup) {
+    return new Promise((resolve, reject) => {
+      const doc = new DOMParser().parseFromString(svgMarkup, 'image/svg+xml');
+      const dom = doc.querySelector('svg');
+      if (!dom) { reject(new Error('SVG 解析失敗')); return; }
+
+      recolorFrameSvg(
+        dom,
+        document.getElementById('redColor').value,
+        document.getElementById('blackColor').value,
+        document.getElementById('whiteColor').value
+      );
+
+      const blob = new Blob([new XMLSerializer().serializeToString(dom)],
+                            { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => { URL.revokeObjectURL(url); resolve({ img, natural: getSvgNaturalSize(dom) }); };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('外框載入失敗')); };
+      img.src = url;
+    });
+  }
+
+  document.getElementById('downloadCompareBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('downloadCompareBtn');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '產生中…';
+
+    // 暫時借用全域繪製狀態，結束後必須完整還原，
+    // 否則畫面上的外框選擇與快取會被這次輸出汙染
+    const savedImg = templateSvgImg;
+    const savedSize = svgNaturalSize;
+    const savedCache = frameOffsetCache;
+    const hideCheck = document.getElementById('hideFrameCheck');
+    const savedHide = hideCheck.checked;
+
+    try {
+      const CELL = 1000;
+      const STICKER_PX = CELL * 0.74;
+      const out = document.createElement('canvas');
+      out.width = CELL * 3;
+      out.height = CELL;
+      const octx = out.getContext('2d', { willReadFrequently: true });
+      octx.fillStyle = '#FFFFFF';
+      octx.fillRect(0, 0, out.width, out.height);
+
+      const lineW = Math.max(2, CELL * 0.002);
+      const variants = [
+        { key: 'left',  label: '左迴旋' },
+        { key: 'right', label: '右迴旋' },
+        { key: 'none',  label: '無外框' }
+      ];
+
+      for (let i = 0; i < variants.length; i++) {
+        const v = variants[i];
+        const cx = CELL * i + CELL / 2;
+        const cy = CELL / 2 - CELL * 0.045;   // 上移，底部留出標註空間
+
+        if (v.key === 'none') {
+          hideCheck.checked = true;
+        } else {
+          hideCheck.checked = false;
+          const loaded = await makeFrameImage(FRAMES[v.key].svg);
+          templateSvgImg = loaded.img;
+          svgNaturalSize = loaded.natural;
+          frameOffsetCache = null;   // 換了外框，置中偏移與內圈半徑需重算
+        }
+
+        drawSingleSticker(octx, cx, cy, STICKER_PX);
+        drawCutCircleOverlay(octx, cx, cy, STICKER_PX, proofLineColorValue, lineW);
+
+        // 款式名稱（不含任何尺寸資訊）
+        octx.save();
+        octx.fillStyle = '#333333';
+        octx.textAlign = 'center';
+        octx.textBaseline = 'middle';
+        octx.font = `600 ${Math.round(CELL * 0.062)}px -apple-system, "PingFang TC", "Noto Sans TC", sans-serif`;
+        octx.fillText(v.label, cx, CELL - CELL * 0.085);
+        octx.restore();
+      }
+
+      downloadCanvas(out, 'CX_Sticker_Compare.png');
+    } catch (err) {
+      alert('產生比較圖失敗：' + err.message);
+    } finally {
+      // 無論成功或失敗都要還原，避免畫面狀態錯亂
+      templateSvgImg = savedImg;
+      svgNaturalSize = savedSize;
+      frameOffsetCache = savedCache;
+      hideCheck.checked = savedHide;
+      btn.disabled = false;
+      btn.textContent = originalText;
+      draw();
+    }
+  });
+
+  document.getElementById('downloadProofBtn').addEventListener('click', () => {
+    const SIZE = 1200;                 // 輸出邊長
+    const STICKER_PX = SIZE * 0.72;    // 貼紙佔比，四周留白便於檢視
+    const cx = SIZE / 2;
+    const cy = SIZE / 2;
+
+    const out = document.createElement('canvas');
+    out.width = SIZE;
+    out.height = SIZE;
+    const octx = out.getContext('2d', { willReadFrequently: true });
+
+    octx.fillStyle = '#FFFFFF';
+    octx.fillRect(0, 0, SIZE, SIZE);
+
+    drawSingleSticker(octx, cx, cy, STICKER_PX);
+
+    // 裁切線：與預覽共用同一套幾何，確保所見即所得
+    const lineW = Math.max(2, SIZE * 0.002);
+    drawCutCircleOverlay(octx, cx, cy, STICKER_PX, proofLineColorValue, lineW);
+
+    downloadCanvas(out, 'CX_Sticker_Proof.png');
   });
 
   draw();
