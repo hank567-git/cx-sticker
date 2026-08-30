@@ -98,7 +98,7 @@
   .tab-btn { flex: 1; padding: 10px; border: none; background: var(--tab-bg); border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer; color: var(--text-2); }
   .tab-btn.active { background: var(--accent); color: #fff; }
 
-  .controls { flex: 1; min-width: min(300px, 100%); display: flex; flex-direction: column; gap: 12px; }
+  .controls { flex: 1; min-width: min(300px, 100%); display: flex; flex-direction: column; gap: 9px; }
   .preview-area { flex: 1; min-width: min(320px, 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--panel-2); padding: 15px; border-radius: 8px; overflow: hidden; position: sticky; top: 10px; z-index: 10; }
 
   h2 { margin: 0 0 5px 0; font-size: 18px; color: var(--text); border-bottom: 2px solid var(--accent); padding-bottom: 6px; }
@@ -110,7 +110,7 @@
      必須關掉原生外觀並自行處理 WebKit 的 swatch 偽元素，才能跟電腦端一致 */
   input[type="color"] {
     width: 100%;
-    height: 38px;
+    height: 32px;
     cursor: pointer;
     -webkit-appearance: none;
     -moz-appearance: none;
@@ -125,8 +125,8 @@
   input[type="color"]::-webkit-color-swatch { border: none; border-radius: 4px; }
   input[type="color"]::-moz-color-swatch { border: none; border-radius: 4px; }
 
-  .color-pickers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .color-item { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 12px; }
+  .color-pickers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .color-item { display: flex; flex-direction: row; align-items: center; gap: 5px; font-size: 12px; }
   .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: bold; color: var(--danger-text); cursor: pointer; margin-top: 2px; }
   .checkbox-label input { width: 18px; height: 18px; cursor: pointer; }
 
@@ -173,7 +173,7 @@
     button { padding: 12px; font-size: 14px; }
     .tab-btn { padding: 12px 6px; font-size: 13px; }
     input[type="range"] { height: 28px; }
-    .color-item input[type="color"] { height: 44px; }
+    .color-item input[type="color"] { height: 40px; }
 
     /* iOS Safari 在 font-size < 16px 的輸入框獲得焦點時會自動放大整頁，
        且不會自動縮回，體感像是版面壞掉。所有可輸入元素一律 >= 16px。
@@ -195,7 +195,6 @@
       padding: 11px 18px !important;
       font-size: 14px !important;
     }
-    #calApplyBtn { padding: 11px 18px !important; }
     #clearImgBtn { padding: 10px 14px !important; font-size: 13px !important; }
 
     /* ---- 微調區塊緊湊化：讓預覽能留在畫面內 ---- */
@@ -261,27 +260,27 @@
     </div>
 
     <div id="singlePanel">
-      <div class="control-group" id="frameTypeSection">
-        <label>1. 外框類型：</label>
-        <div class="align-btn-group">
+      <div class="control-group" id="frameTypeSection" style="flex-direction:row; align-items:center; gap:8px; flex-wrap:wrap;">
+        <label style="flex:none;">1. 外框</label>
+        <div class="align-btn-group" style="flex:1; margin:0;">
           <button id="frameRightBtn" class="btn-align">右迴旋</button>
           <button id="frameLeftBtn" class="btn-align">左迴旋</button>
         </div>
       </div>
 
-      <div class="control-group" id="colorSection">
-        <label>2. 外框分區調色：</label>
-        <div class="color-pickers">
+      <div class="control-group" id="colorSection" style="flex-direction:row; align-items:center; gap:8px; flex-wrap:wrap;">
+        <label style="flex:none;">2. 外框調色</label>
+        <div class="color-pickers" style="flex:1;">
           <div class="color-item">
-            <span>紅色區</span>
+            <span style="flex:none;">紅</span>
             <input type="color" id="redColor" value="#FF0000">
           </div>
           <div class="color-item">
-            <span>黑色區</span>
+            <span style="flex:none;">黑</span>
             <input type="color" id="blackColor" value="#000000">
           </div>
           <div class="color-item">
-            <span>白色區</span>
+            <span style="flex:none;">白</span>
             <input type="color" id="whiteColor" value="#FFFFFF">
           </div>
         </div>
@@ -297,19 +296,21 @@
         </span>
       </div>
 
-      <div class="control-group">
-        <label>3. 上傳內圈圖片：</label>
-        <div style="display:flex; gap:8px; align-items:center;">
+      <div class="control-group" style="flex-direction:row; align-items:center; gap:8px; flex-wrap:wrap;">
+        <label style="flex:none;">3. 圖片</label>
+        <div style="display:flex; gap:8px; align-items:center; flex:1; min-width:0;">
           <input type="file" id="imageInput" accept="image/*" style="flex:1; min-width:0;">
           <button id="clearImgBtn" class="btn-danger" style="width:auto; flex:none; padding:6px 10px; font-size:12px; margin:0;">刪除</button>
         </div>
       </div>
 
       <div class="control-group">
-        <label>4. 圖片微調：</label>
-        <div class="align-btn-group">
-          <button id="alignHBtn" class="btn-align">左右置中</button>
-          <button id="alignVBtn" class="btn-align">上下置中</button>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <label style="flex:none;">4. 微調</label>
+          <div class="align-btn-group" style="flex:1; margin:0;">
+            <button id="alignHBtn" class="btn-align">左右置中</button>
+            <button id="alignVBtn" class="btn-align">上下置中</button>
+          </div>
         </div>
 
         <div class="quad-grid">
@@ -392,48 +393,25 @@
         打樣圖加上 N3D LAB 浮水印
       </label>
 
-      <button id="downloadProofBtn" class="btn-download" style="margin-top:8px;">下載單張打樣圖（含裁切線）</button>
-      <button id="downloadCompareBtn" class="btn-download" style="margin-top:6px; background:#6f42c1;">下載三款比較圖（左／右迴旋／無外框）</button>
-      <p class="tip">💡 給客戶確認用：高解析單張貼紙，虛線標示實際裁切位置。深色貼紙建議用白或青色線。<br>
-      比較圖會用同一張照片並排三種樣式，方便客戶挑選。</p>
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button id="downloadProofBtn" class="btn-download" style="flex:1; margin:0;">下載單張打樣圖</button>
+        <button id="downloadCompareBtn" class="btn-download" style="flex:1; margin:0; background:#6f42c1;">下載三款比較圖</button>
+      </div>
 
       <button id="resetAllBtn" class="btn-reset">重置所有設定</button>
     </div>
 
     <div id="sheetPanel" style="display:none;">
       <div class="control-group">
-        <label>圈直徑 — 印出來的實際大小（mm）：</label>
+        <label>內圈裁切直徑 — 印出來的實際大小（mm）：</label>
         <div style="display:flex; gap:8px; align-items:center;">
-          <input type="range" id="sheetDiaInput" min="16.6" max="18.6" step="0.1" value="18" style="flex:1;">
+          <input type="range" id="cutDiaInput" min="10" max="18" step="0.1" value="16.4" style="flex:1;">
           <div class="number-input-wrap">
-            <input type="number" id="sheetDiaNum" min="16.6" max="18.6" step="0.1" value="18" style="width:60px;">
+            <input type="number" id="cutDiaNum" min="10" max="18" step="0.1" value="16.4" style="width:60px;">
             <span class="unit">mm</span>
           </div>
         </div>
         <p class="tip" id="diaInfo"></p>
-      </div>
-
-      <div class="control-group" style="background:var(--warn-bg); border:1px solid var(--warn-border); border-radius:8px; padding:10px;">
-        <label>📏 實測校準（換店家／換機器時重做一次）</label>
-        <p class="tip" style="margin:2px 0 6px 0;">
-          目前依 7-11 ibon 規格設定（紙張 100×148mm，機台會等比縮放並留白邊）。<br>
-          印一張出來，用尺量任一項填入即可——程式會自動反推整張圖的縮放誤差並修正，
-          修正後所有尺寸會一起變準。
-        </p>
-        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-          <span class="tip">我量的是</span>
-          <select id="calWhat" style="width:auto; padding:6px 8px; font-size:12px; border-radius:6px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text);">
-            <option value="sticker">貼紙外圈</option>
-            <option value="cut">裁切線內圈</option>
-          </select>
-          <span class="tip">量到</span>
-          <div class="number-input-wrap">
-            <input type="number" id="calMeasured" step="0.1" placeholder="18.3" style="width:56px;">
-            <span class="unit">mm</span>
-          </div>
-          <button id="calApplyBtn" class="btn-secondary" style="width:auto; padding:8px 12px; margin:0;">套用</button>
-        </div>
-        <p class="tip" id="calResult" style="margin-top:6px;"></p>
       </div>
 
       <div class="control-group">
@@ -444,7 +422,7 @@
           </label>
           <div id="cutLineOptions" style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
             <select id="cutLineShape" style="width:auto; padding:6px 8px; font-size:12px; border-radius:6px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text);">
-              <option value="circle">圓形 16.2mm</option>
+              <option value="circle">圓形 16.4mm</option>
               <option value="grid">直線格線</option>
             </select>
             <button id="cutLineBlackBtn" class="btn-secondary" style="width:auto; padding:7px 12px; margin:0; font-size:12px; background:#000000;">黑</button>
@@ -453,7 +431,7 @@
             <button id="cutLineWhiteBtn" class="btn-secondary" style="width:auto; padding:7px 12px; margin:0; font-size:12px; background:#ffffff; color:#333; border:1px solid #ccc;">白</button>
           </div>
         </div>
-        <p class="tip">💡 圓形模式會在每張貼紙畫出 16.2mm 的裁切圓；深色貼紙用淺色線比較看得清楚。</p>
+        <p class="tip">💡 圓形模式會在每張貼紙畫出 16.4mm 的裁切圓；深色貼紙用淺色線比較看得清楚。</p>
       </div>
 
       <div class="control-group">
@@ -609,7 +587,7 @@
 
   // 影像實際印在紙上的高度（mm）。這才是決定成品大小的關鍵值。
   // 由實測反推：設定 18mm 印出 16.5mm → 139.7mm（上下白邊各約 4.2mm）。
-  // 換機台或換店家時，用排版頁的「實測校準」重新量測即可。
+  // 已由實測定案；若換機台導致尺寸不符，調整此數值即可。
   let PRINT_AREA_HEIGHT_MM = 139.7;
 
   const FILE_W_PX = 1200, FILE_H_PX = 1800;   // 輸出檔案像素尺寸
@@ -625,11 +603,12 @@
   function cutLineInsetMM() {
     return (STICKER_PRINTED_DIAMETER_MM - CUT_CIRCLE_DIAMETER_MM) / 2;
   }
-  const CUT_CIRCLE_DIAMETER_MM = 16.2;   // 圓形模式：裁切圓直徑
+  // 內圈裁切直徑（mm），可由排版頁調整
+  let CUT_CIRCLE_DIAMETER_MM = 16.4;
   const ROW_GAP_MM = 1;                  // 排與排之間的固定間距（mm），方便裁切
 
-  // 每個圈「印出來的實際直徑」（mm）——所見即所得，不再是檔案上的抽象數值
-  let STICKER_PRINTED_DIAMETER_MM = 18;
+  // 貼紙外圈「印出來的實際直徑」（mm）。已由實測定案，固定不再開放調整。
+  const STICKER_PRINTED_DIAMETER_MM = 18.4;
 
   // 單貼紙編輯畫布固定 360px 代表一整顆貼紙，故比例隨實際直徑換算，
   // 確保 1mm 出血與 16mm 裁切圈在任何直徑設定下都維持正確比例
@@ -797,107 +776,50 @@
     toastTimer = setTimeout(() => { box.style.display = 'none'; }, 2600);
   }
 
-  // ---- 圈直徑設定（滑桿 + 數字輸入雙向綁定）----
-  const sheetDiaInput = document.getElementById('sheetDiaInput');
-  const sheetDiaNum = document.getElementById('sheetDiaNum');
+  // ---- 內圈裁切直徑設定（滑桿 + 數字輸入雙向綁定）----
+  // 內圈上限：外圈固定 18.6mm，每邊至少保留 MIN_BLEED_MM 出血供裁切容錯
+  const MIN_BLEED_MM = 0.2;
+  function maxCutDiameterMM() {
+    return Math.floor((STICKER_PRINTED_DIAMETER_MM - MIN_BLEED_MM * 2) * 10) / 10;
+  }
+
+  const cutDiaInput = document.getElementById('cutDiaInput');
+  const cutDiaNum = document.getElementById('cutDiaNum');
   const diaInfo = document.getElementById('diaInfo');
 
-  // 依目前列印區域，算出 7 排 5 欄放得下的最大直徑
-  function maxDiameterMM() {
-    const byWidth = printAreaWidthMM() / SHEET_COLS;
-    const byHeight = (PRINT_AREA_HEIGHT_MM - (SHEET_ROWS - 1) * ROW_GAP_MM) / SHEET_ROWS;
-    return Math.floor(Math.min(byWidth, byHeight) * 10) / 10;
-  }
-
-  // 圈徑下限：必須大於裁切直徑，否則裁切圓會超出貼紙、出血變成負值。
-  // 每邊至少保留 MIN_BLEED_MM 的出血，裁切才有容錯空間。
-  const MIN_BLEED_MM = 0.2;
-  function minDiameterMM() {
-    return Math.ceil((CUT_CIRCLE_DIAMETER_MM + MIN_BLEED_MM * 2) * 10) / 10;
-  }
-
-  function setSheetDiameter(val, syncBoth = true) {
+  function setCutDiameter(val, syncBoth = true) {
     let v = parseFloat(val);
-    if (isNaN(v)) v = 18;
-    const max = maxDiameterMM();
-    const min = minDiameterMM();
-    v = Math.min(Math.max(v, min), max);
+    if (isNaN(v)) v = 16.4;
+    const max = maxCutDiameterMM();
+    v = Math.min(Math.max(v, 10), max);
     v = Math.round(v * 10) / 10;
-    STICKER_PRINTED_DIAMETER_MM = v;
+    CUT_CIRCLE_DIAMETER_MM = v;
 
-    sheetDiaInput.max = max;
-    sheetDiaNum.max = max;
-    sheetDiaInput.min = min;
-    sheetDiaNum.min = min;
+    cutDiaInput.max = max;
+    cutDiaNum.max = max;
     if (syncBoth) {
-      sheetDiaInput.value = v;
-      sheetDiaNum.value = v;
+      cutDiaInput.value = v;
+      cutDiaNum.value = v;
     }
 
-    const px = v * (FILE_H_PX / PRINT_AREA_HEIGHT_MM);
-    const cutDia = CUT_CIRCLE_DIAMETER_MM;
-    const totalW = SHEET_COLS * v;
-    const totalH = SHEET_ROWS * v + (SHEET_ROWS - 1) * ROW_GAP_MM;
+    const D = STICKER_PRINTED_DIAMETER_MM;
+    const totalW = SHEET_COLS * D;
+    const totalH = SHEET_ROWS * D + (SHEET_ROWS - 1) * ROW_GAP_MM;
+    const fits = totalW <= printAreaWidthMM() && totalH <= PRINT_AREA_HEIGHT_MM;
 
     diaInfo.innerHTML =
-      `這是<b>印出來的實際直徑</b>（檔案內 ${px.toFixed(1)} px），裁切後成品約 <b>${cutDia.toFixed(1)} mm</b>。` +
+      `貼紙外圈固定 <b>${D} mm</b>，裁切後成品 <b>${v} mm</b>，出血每邊 ${((D - v) / 2).toFixed(2)} mm。` +
       `<br>排版佔用 ${totalW.toFixed(1)} × ${totalH.toFixed(1)} mm ／ 可印區 ` +
-      `${printAreaWidthMM().toFixed(1)} × ${PRINT_AREA_HEIGHT_MM.toFixed(1)} mm（可設 ${min}～${max} mm）`;
+      `${printAreaWidthMM().toFixed(1)} × ${PRINT_AREA_HEIGHT_MM.toFixed(1)} mm` +
+      (fits ? '' : ' <span style="color:#dc3545;">⚠️ 超出可印範圍</span>');
 
-    if (currentMode === 'sheet') draw();
+    // 內圈同時影響排版的裁切圓與單張預覽的裁切線
+    draw();
   }
-  sheetDiaInput.addEventListener('input', (e) => setSheetDiameter(e.target.value));
-  sheetDiaNum.addEventListener('input', (e) => setSheetDiameter(e.target.value, false));
+  cutDiaInput.addEventListener('input', (e) => setCutDiameter(e.target.value));
+  cutDiaNum.addEventListener('input', (e) => setCutDiameter(e.target.value, false));
 
-  // ---- 實測校準 ----
-  // 印出來的尺寸不符時，代表「可列印區域高度」的假設有誤，
-  // 而非圈直徑設錯——修正 PRINT_AREA_HEIGHT_MM 才是治本做法。
-  // 因為整張圖是等比縮放，任一尺寸的誤差比例即代表全圖的誤差比例。
-  document.getElementById('calApplyBtn').addEventListener('click', () => {
-    const what = document.getElementById('calWhat').value;
-    const measured = parseFloat(document.getElementById('calMeasured').value);
-    const result = document.getElementById('calResult');
-
-    // 預期值直接取自目前設定，不需使用者再填一次
-    const expected = (what === 'cut')
-      ? CUT_CIRCLE_DIAMETER_MM
-      : STICKER_PRINTED_DIAMETER_MM;
-    const label = (what === 'cut') ? '裁切線內圈' : '貼紙外圈';
-
-    if (isNaN(measured) || measured <= 0) {
-      result.innerHTML = '<span style="color:#dc3545;">請填入實際量到的數值。</span>';
-      return;
-    }
-    if (Math.abs(measured / expected - 1) > 0.25) {
-      result.innerHTML = `<span style="color:#dc3545;">量到 ${measured}mm 與預期的 ${expected}mm ` +
-        `差距過大，請確認量的是「${label}」。</span>`;
-      return;
-    }
-
-    const before = STICKER_PRINTED_DIAMETER_MM;
-    const factor = measured / expected;
-    PRINT_AREA_HEIGHT_MM = PRINT_AREA_HEIGHT_MM * factor;
-
-    // 沿用原本的圈直徑；若校準後版面放不下會自動夾到上限
-    setSheetDiameter(before);
-    const applied = STICKER_PRINTED_DIAMETER_MM;
-
-    let msg = `✅ 已校準：整張圖縮放誤差 <b>${((factor - 1) * 100).toFixed(2)}%</b>，` +
-      `實際可印區域修正為 <b>${printAreaWidthMM().toFixed(1)} × ${PRINT_AREA_HEIGHT_MM.toFixed(1)} mm</b>` +
-      `（紙張 ${PAPER_WIDTH_MM}×${PAPER_HEIGHT_MM}mm，白邊約 ` +
-      `${((PAPER_WIDTH_MM - printAreaWidthMM()) / 2).toFixed(1)}／` +
-      `${((PAPER_HEIGHT_MM - PRINT_AREA_HEIGHT_MM) / 2).toFixed(1)} mm）。`;
-
-    if (Math.abs(applied - before) > 0.05) {
-      msg += `<br><span style="color:#dc3545;">⚠️ 校準後 5 欄放不下 ${before}mm，` +
-        `圈直徑已自動降為上限 <b>${applied} mm</b>。</span>`;
-    } else {
-      msg += `<br>圈直徑維持 <b>${applied} mm</b>，重新下載即可印出正確尺寸。`;
-    }
-    result.innerHTML = msg;
-  });
-
-  setSheetDiameter(STICKER_PRINTED_DIAMETER_MM);
+  setCutDiameter(CUT_CIRCLE_DIAMETER_MM);
 
   // ---- 裁切對位線：開關 + 三種固定顏色 ----
   const CUT_LINE_WIDTH_PX = 0.5;   // 線寬固定（以預覽畫布 400px 寬為基準）
@@ -929,9 +851,9 @@
     });
     function pick(hex) {
       Object.entries(btns).forEach(([c, btn]) => {
-        // 用外框標示目前選中的顏色，避免不知道現在是哪一色
-        btn.style.outline = (c === hex) ? '3px solid #007bff' : 'none';
-        btn.style.outlineOffset = '1px';
+        // 用內縮外框標示選中色；inset box-shadow 不佔版面，
+        // 不像 outline 會往外溢出壓到相鄰元素
+        btn.style.boxShadow = (c === hex) ? 'inset 0 0 0 3px #007bff' : 'none';
       });
       onPick(hex);
     }
@@ -1064,10 +986,10 @@
   function selectFrame(key) {
     loadFrame(key);
     Object.entries(frameBtns).forEach(([k, btn]) => {
-      // 選中者加深底色並加外框，避免不知道目前是哪一種
+      // 選中者加深底色並加外框，避免不知道目前是哪一種。
+      // 用 inset box-shadow 而非 outline：outline 會往外溢出、壓到下一行元素
       btn.style.background = (k === key) ? '#0d6efd' : '#17a2b8';
-      btn.style.outline = (k === key) ? '3px solid #b6d4fe' : 'none';
-      btn.style.outlineOffset = '1px';
+      btn.style.boxShadow = (k === key) ? 'inset 0 0 0 3px #b6d4fe' : 'none';
     });
     // 不重算圖片縮放：兩種迴旋的內圈開孔相同，
     // 重置會把使用者辛苦調好的位置與縮放歸零。
@@ -1495,9 +1417,9 @@
     targetCtx.beginPath();
 
     if (document.getElementById('cutLineShape').value === 'circle') {
-      // 圓形模式：讓線的「內緣」貼齊 16.2mm，成品直徑才會剛好是 16.2mm。
+      // 圓形模式：讓線的「內緣」貼齊裁切直徑，成品尺寸才會剛好相符。
       // Canvas 的 stroke 是沿路徑置中描繪（各半在路徑內外），
-      // 所以路徑半徑要往外推半個線寬，整條線才會完全落在 16.2mm 之外。
+      // 所以路徑半徑要往外推半個線寬，整條線才會完全落在裁切圓之外。
       const cutR = (CUT_CIRCLE_DIAMETER_MM / 2) * pxPerMM + lineW / 2;
       filledRows.forEach(r => {
         for (let c = 0; c < cols; c++) {
@@ -1709,15 +1631,27 @@
   });
 
   // ---- 單張貼紙打樣圖（給客戶確認用）----
-  // 高解析度呈現一張貼紙，並疊上實際的 16.2mm 裁切線，
+  // 高解析度呈現一張貼紙，並疊上實際的裁切線，
   // 讓客戶一眼看出成品會裁成什麼樣子、哪些內容會被裁掉。
   // 不標註任何尺寸數字（屬內部資訊）。
   // ---- 打樣圖浮水印 ----
   // 僅用於「給客戶看」的打樣圖與比較圖；4x6 實際列印檔不會加，
   // 否則浮水印會被真的印在貼紙上。
   const WATERMARK_TEXT = 'N3D LAB';
-  function drawWatermark(ctx, w, h) {
+  // circles: [{cx, cy, r}]，浮水印只畫在這些圓內；省略則鋪滿整張。
+  function drawWatermark(ctx, w, h, circles) {
     ctx.save();
+
+    // 先裁切到貼紙範圍，白底區域就不會有浮水印
+    if (circles && circles.length) {
+      ctx.beginPath();
+      circles.forEach(c => {
+        ctx.moveTo(c.cx + c.r, c.cy);   // 避免各圓之間被連成一條線
+        ctx.arc(c.cx, c.cy, c.r, 0, Math.PI * 2);
+      });
+      ctx.clip();
+    }
+
     // 貼紙有深有淺，單一顏色必有一種底看不見（純黑字會消失在深色環上）。
     // 用「白描邊 + 黑字」：深底靠白邊浮現、淺底靠黑字浮現，兩者皆可辨識。
     ctx.font = `bold ${Math.round(h * 0.038)}px -apple-system, "Helvetica Neue", Arial, sans-serif`;
@@ -1855,6 +1789,13 @@
         { key: 'none',  label: '無外框' }
       ];
 
+      // 有外框時照片只需填滿外框開孔，無外框時可視範圍是更大的裁切圓。
+      // 若沿用同一份縮放，無外框那款會明顯偏小，故等比放大到相同視覺尺寸。
+      let frameOpeningR = null;
+      const wmCircles = [];   // 供浮水印裁切用
+      const savedBaseFit = baseFitScale;
+      const savedImgState = { ...imgState };
+
       for (let i = 0; i < variants.length; i++) {
         const v = variants[i];
         const cx = CELL * i + CELL / 2;
@@ -1862,16 +1803,25 @@
 
         if (v.key === 'none') {
           hideCheck.checked = true;
+          // 以「裁切圓 / 外框開孔」的比例等比放大，位移量同步放大以維持構圖
+          if (frameOpeningR && userImg) {
+            const ratio = cutRadiusPx() / frameOpeningR;
+            baseFitScale = savedBaseFit * ratio;
+            imgState.x = 180 + (savedImgState.x - 180) * ratio;
+            imgState.y = 180 + (savedImgState.y - 180) * ratio;
+          }
         } else {
           hideCheck.checked = false;
           const loaded = await makeFrameImage(FRAMES[v.key].svg);
           templateSvgImg = loaded.img;
           svgNaturalSize = loaded.natural;
           frameOffsetCache = null;   // 換了外框，置中偏移與內圈半徑需重算
+          frameOpeningR = frameInnerRadiusPx();   // 記下開孔半徑，供無外框那款換算
         }
 
         drawSingleSticker(octx, cx, cy, STICKER_PX);
         drawCutCircleOverlay(octx, cx, cy, STICKER_PX, proofLineColorValue, lineW);
+        wmCircles.push({ cx, cy, r: STICKER_PX / 2 });
 
         // 款式名稱（不含任何尺寸資訊）
         octx.save();
@@ -1883,8 +1833,13 @@
         octx.restore();
       }
 
+      // 還原被暫時放大的縮放與位移
+      baseFitScale = savedBaseFit;
+      imgState.x = savedImgState.x;
+      imgState.y = savedImgState.y;
+
       if (document.getElementById('watermarkCheck').checked) {
-        drawWatermark(octx, out.width, out.height);
+        drawWatermark(octx, out.width, out.height, wmCircles);
       }
       // 改輸出 JPEG：3000x1000 的 PNG 常超過 2MB，JPEG 可壓到十分之一以下。
       // 打樣圖已有白底，不受 JPEG 不支援透明的限制。
@@ -1926,7 +1881,7 @@
     drawCutCircleOverlay(octx, cx, cy, STICKER_PX, proofLineColorValue, lineW);
 
     if (document.getElementById('watermarkCheck').checked) {
-      drawWatermark(octx, out.width, out.height);
+      drawWatermark(octx, out.width, out.height, [{ cx, cy, r: STICKER_PX / 2 }]);
     }
     downloadCanvas(out, 'CX_Sticker_Proof.jpg', 'image/jpeg', 0.92);
   });
