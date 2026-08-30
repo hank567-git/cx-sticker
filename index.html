@@ -388,6 +388,11 @@
         </div>
       </div>
 
+      <label class="checkbox-label" style="color:var(--text-2); margin-top:6px;">
+        <input type="checkbox" id="watermarkCheck" checked>
+        打樣圖加上 N3D LAB 浮水印
+      </label>
+
       <button id="downloadProofBtn" class="btn-download" style="margin-top:8px;">下載單張打樣圖（含裁切線）</button>
       <button id="downloadCompareBtn" class="btn-download" style="margin-top:6px; background:#6f42c1;">下載三款比較圖（左／右迴旋／無外框）</button>
       <p class="tip">💡 給客戶確認用：高解析單張貼紙，虛線標示實際裁切位置。深色貼紙建議用白或青色線。<br>
@@ -1665,7 +1670,7 @@
   // ---- 共用下載邏輯 ----
   // 用 Blob 而非 toDataURL：大尺寸 PNG 轉 base64 字串可達數 MB，
   // 手機瀏覽器容易因字串過長而失敗或當掉。
-  function downloadCanvas(sourceCanvas, filename) {
+  function downloadCanvas(sourceCanvas, filename, mime = 'image/png', quality) {
     sourceCanvas.toBlob((blob) => {
       if (!blob) {
         alert('產生圖檔失敗，請再試一次。');
@@ -1692,7 +1697,7 @@
         link.click();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
       }
-    }, 'image/png');
+    }, mime, quality);
   }
 
   document.getElementById('downloadSheetBtn').addEventListener('click', () => {
@@ -1708,6 +1713,89 @@
   // 高解析度呈現一張貼紙，並疊上實際的 16.2mm 裁切線，
   // 讓客戶一眼看出成品會裁成什麼樣子、哪些內容會被裁掉。
   // 不標註任何尺寸數字（屬內部資訊）。
+  // ---- 打樣圖浮水印 ----
+  // 僅用於「給客戶看」的打樣圖與比較圖；4x6 實際列印檔不會加，
+  // 否則浮水印會被真的印在貼紙上。
+  const WATERMARK_TEXT = 'N3D LAB';
+  function drawWatermark(ctx, w, h) {
+    ctx.save();
+    // 貼紙有深有淺，單一顏色必有一種底看不見（純黑字會消失在深色環上）。
+    // 用「白描邊 + 黑字」：深底靠白邊浮現、淺底靠黑字浮現，兩者皆可辨識。
+    ctx.font = `bold ${Math.round(h * 0.038)}px -apple-system, "Helvetica Neue", Arial, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = Math.max(2, h * 0.002);
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.26)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.19)';
+
+    // 傾斜鋪滿：先旋轉座標系，再以夠大的範圍平舖，確保旋轉後四角不留空
+    const angle = -Math.PI / 6;   // -30 度
+    ctx.translate(w / 2, h / 2);
+    ctx.rotate(angle);
+
+    const stepX = ctx.measureText(WATERMARK_TEXT).width * 1.5;
+    const stepY = h * 0.092;
+    const reach = Math.hypot(w, h);   // 旋轉後需覆蓋的半徑
+
+    let row = 0;
+    for (let y = -reach; y <= reach; y += stepY, row++) {
+      // 每列交錯半格，避免形成整齊的直線通道
+      const offset = (row % 2) * (stepX / 2);
+      for (let x = -reach; x <= reach; x += stepX) {
+        ctx.strokeText(WATERMARK_TEXT, x + offset, y);
+        ctx.fillText(WATERMARK_TEXT, x + offset, y);
+      }
+    }
+    ctx.restore();
+
+    drawProofNotice(ctx, w, h);
+  }
+
+  // 右下角警語：避免客戶誤以為成品上會有浮水印。
+  // 尺寸依畫布高度換算，單張(1200)與比較圖(3000x1000)都能維持相同視覺比例。
+  const PROOF_NOTICE_TEXT = '※ 此為參考圖，正式成品並不會有浮水印';
+  function drawProofNotice(ctx, w, h) {
+    const fontSize = Math.round(h * 0.028);
+    const padX = h * 0.022;
+    const padY = h * 0.014;
+    const margin = h * 0.025;
+
+    ctx.save();
+    ctx.font = `${fontSize}px -apple-system, "PingFang TC", "Noto Sans TC", sans-serif`;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'alphabetic';
+
+    const textW = ctx.measureText(PROOF_NOTICE_TEXT).width;
+    const boxW = textW + padX * 2;
+    const boxH = fontSize + padY * 2;
+    const boxX = w - margin - boxW;
+    const boxY = h - margin - boxH;
+
+    // 半透明底條，確保警語在任何底色上都讀得到
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.88)';
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.18)';
+    ctx.lineWidth = Math.max(1, h * 0.0012);
+    const r = boxH / 2;
+    ctx.beginPath();
+    ctx.moveTo(boxX + r, boxY);
+    ctx.lineTo(boxX + boxW - r, boxY);
+    ctx.arcTo(boxX + boxW, boxY, boxX + boxW, boxY + r, r);
+    ctx.lineTo(boxX + boxW, boxY + boxH - r);
+    ctx.arcTo(boxX + boxW, boxY + boxH, boxX + boxW - r, boxY + boxH, r);
+    ctx.lineTo(boxX + r, boxY + boxH);
+    ctx.arcTo(boxX, boxY + boxH, boxX, boxY + boxH - r, r);
+    ctx.lineTo(boxX, boxY + r);
+    ctx.arcTo(boxX, boxY, boxX + r, boxY, r);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#444444';
+    ctx.fillText(PROOF_NOTICE_TEXT, boxX + boxW - padX, boxY + padY + fontSize * 0.82);
+    ctx.restore();
+  }
+
   // ---- 三款比較打樣圖 ----
   // 同一張照片分別套上左迴旋、右迴旋、無外框，並排輸出供客戶挑選。
   // 需為每種外框各自光柵化一次 SVG（Image 載入是非同步），
@@ -1794,7 +1882,12 @@
         octx.restore();
       }
 
-      downloadCanvas(out, 'CX_Sticker_Compare.png');
+      if (document.getElementById('watermarkCheck').checked) {
+        drawWatermark(octx, out.width, out.height);
+      }
+      // 改輸出 JPEG：3000x1000 的 PNG 常超過 2MB，JPEG 可壓到十分之一以下。
+      // 打樣圖已有白底，不受 JPEG 不支援透明的限制。
+      downloadCanvas(out, 'CX_Sticker_Compare.jpg', 'image/jpeg', 0.92);
     } catch (err) {
       alert('產生比較圖失敗：' + err.message);
     } finally {
@@ -1829,7 +1922,10 @@
     const lineW = Math.max(2, SIZE * 0.002);
     drawCutCircleOverlay(octx, cx, cy, STICKER_PX, proofLineColorValue, lineW);
 
-    downloadCanvas(out, 'CX_Sticker_Proof.png');
+    if (document.getElementById('watermarkCheck').checked) {
+      drawWatermark(octx, SIZE, SIZE);
+    }
+    downloadCanvas(out, 'CX_Sticker_Proof.jpg', 'image/jpeg', 0.92);
   });
 
   draw();
